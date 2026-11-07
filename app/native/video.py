@@ -14,7 +14,7 @@ from PySide6.QtGui import QImage
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 
 
-ROOT = Path(__file__).resolve().parents[2]
+from ..paths import ROOT
 FRAME_WIDTH, FRAME_HEIGHT, FRAME_RATE = 320, 512, 30
 MAX_SECONDS = 8
 

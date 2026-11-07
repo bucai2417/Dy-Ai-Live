@@ -94,7 +94,9 @@ def test_maximum_bubbles_stay_finite_inside_arena(bounds):
         assert top + bubble.radius <= bubble.y <= top + height - bubble.radius
     positions = [(bubble.x, bubble.y) for bubble in arena.bubbles.values()]
     arena.update(senders, settings, 1000, paused=True)
-    assert [(bubble.x, bubble.y) for bubble in arena.bubbles.values()] == pytest.approx(positions)
+    current_positions = [(bubble.x, bubble.y) for bubble in arena.bubbles.values()]
+    for current, previous in zip(current_positions, positions, strict=True):
+        assert current == pytest.approx(previous)
     arena.update(senders, {"show_ballpit": False}, 1001)
     assert not arena.bubbles
 

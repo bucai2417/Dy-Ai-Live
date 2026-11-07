@@ -20,6 +20,7 @@ from . import __version__, models_store, music, playlist
 from .brain.scheduler import Brain
 from .config import LOG_DIR, ROOT, WEB_DIR, settings
 from .events import Event
+from .paths import renderer_command
 from .hub import hub
 from .ingest.base import build_ingestor
 from .metrics import metrics
@@ -814,7 +815,7 @@ async def api_renderer_start(body: dict | None = None):
         status = renderer_status()
         if _renderer_alive() or status.get("running"):
             return JSONResponse({**status, "ok": True, "already": True})
-        args = [sys.executable, "-m", "app.renderer", "--url", f"http://127.0.0.1:{settings.port}",
+        args = [*renderer_command(), "--url", f"http://127.0.0.1:{settings.port}",
                 "--width", str(width), "--height", str(height), "--fps", str(fps)]
         try:
             with (LOG_DIR / "renderer.log").open("a", encoding="utf-8") as logfile:

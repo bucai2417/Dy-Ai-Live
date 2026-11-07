@@ -5,6 +5,7 @@ import logging
 import time
 from pathlib import Path
 
+from ..paths import ROOT
 from ..gift_show import GiftShow
 from ..lines import render_line
 from ..settings_store import Effective
@@ -124,7 +125,7 @@ class LiveInteractions:
         stage = Effective.stage()
         source = Path(stage["video_path"])
         if not source.is_absolute():
-            source = Path(__file__).resolve().parents[2] / source
+            source = ROOT / source
         video_ready = config["beer_video"] and stage["video_enabled"] and source.is_file()
         return self.gift_show.enqueue(event, video_ready)
 

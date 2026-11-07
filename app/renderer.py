@@ -8,7 +8,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from .paths import ROOT
 DEFAULT_PORT = 18849
 
 

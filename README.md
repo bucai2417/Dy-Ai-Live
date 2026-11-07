@@ -4,7 +4,7 @@ Python + PySide6 桌面工作台，负责直播画面、互动控制、语音与
 
 **版本：1.0.0 · 许可：PolyForm Noncommercial 1.0.0（源码可见，禁止商业用途）**。许可边界见 [中文说明](docs/非商业使用许可说明.md) 和 [第三方说明](THIRD_PARTY_NOTICES.md)，功能变更见 [更新记录](CHANGELOG.md)。
 
-本版本提供 Python 源码，尚未提供独立 EXE。
+v1.0.0 Release 提供 Python 源码。main 分支已配置 Windows 自动构建，可在 GitHub Actions 下载免安装 EXE 目录包；未来版本标签通过检查后会自动上传对应 Release，详见 [Windows 自动构建](docs/Windows自动构建.md)。
 
 ## 启动
 

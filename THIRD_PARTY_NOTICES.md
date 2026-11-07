@@ -4,7 +4,7 @@
 
 ## v1.0.0 随附内容
 
-公开源码包含项目 Python 代码、网页兼容入口、自有 Deepy 立绘/眼嘴贴片/骨架及服装、测试、工具和文档。依赖包通过 requirements 文件安装，本源码包不捆绑 Python、PySide6、FFmpeg、Node.js 或它们的二进制文件。发布 EXE 时应另行处理实际随包依赖的许可及声明。
+公开源码包含项目 Python 代码、网页兼容入口、自有 Deepy 立绘/眼嘴贴片/骨架及服装、测试、工具和文档。依赖包通过 requirements 文件安装，源码包不捆绑依赖二进制。Windows 自动构建产物另外包含 Python、Qt/PySide6 等运行依赖及 THIRD_PARTY_LICENSES 声明；动态库继续适用自身许可，详见 [Windows 构建说明](docs/Windows自动构建.md)。外部 FFmpeg 可执行文件、Node.js、签名 SDK 和旧网页 Live2D 资源不随 EXE 包分发。
 
 ## 未随公开源码分发的可选材料
 

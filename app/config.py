@@ -1,14 +1,14 @@
 """全局配置：读取 .env，提供带默认值的强类型设置。"""
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-ROOT = Path(__file__).resolve().parent.parent
-WEB_DIR = ROOT / "web"
+from .paths import ROOT, RESOURCE_ROOT
+
+WEB_DIR = RESOURCE_ROOT / "web"
 DATA_DIR = ROOT / "data"
 LOG_DIR = ROOT / "logs"
 

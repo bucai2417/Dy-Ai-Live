@@ -28,8 +28,9 @@ from .ticker import TickerRenderer
 from .icons import draw_icon
 from .text_overlay import draw_outlined, draw_subtitle
 
-ROOT = Path(__file__).resolve().parents[2]
-ART_DIR = ROOT / "web" / "assets" / "whale" / "art"
+from ..paths import RESOURCE_ROOT
+
+ART_DIR = RESOURCE_ROOT / "web" / "assets" / "whale" / "art"
 
 
 def font(size: int, bold: bool = False) -> QFont:

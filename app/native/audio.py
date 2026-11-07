@@ -9,6 +9,7 @@ import numpy as np
 from PySide6.QtCore import QByteArray, QBuffer, QIODevice, QObject, QTimer, QUrl, Signal
 from PySide6.QtMultimedia import QAudioBufferOutput, QAudioFormat, QAudioOutput, QMediaPlayer
 
+from ..paths import ROOT
 from .state import StageState
 
 
@@ -114,7 +115,7 @@ class AudioController(QObject):
             return
         source = Path(path).expanduser()
         if not source.is_absolute():
-            source = Path(__file__).resolve().parents[2] / source
+            source = ROOT / source
         path = str(source)
         if path == self.bgm_path and not self.bgm_failed:
             return

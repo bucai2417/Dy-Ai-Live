@@ -9,6 +9,7 @@ from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QKeySequence, QPainter, QShortcut
 from PySide6.QtWidgets import QApplication, QButtonGroup, QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMessageBox, QProgressBar, QPushButton, QScrollArea, QTabWidget, QTextEdit, QVBoxLayout, QWidget
 
+from ..paths import ROOT
 from .audio import AudioController
 from .video import VideoController
 from .client import LiveClient
@@ -113,7 +114,7 @@ class StudioWindow(QMainWindow):
         self.video.notice.connect(self.notice)
         self.audio.music_ended.connect(lambda identifier: self.client.post("/api/music/played", {"id": identifier}))
         self.popout = None
-        self.status_path = Path(__file__).resolve().parents[2] / "data" / f"native-renderer-{output_port}.json"
+        self.status_path = ROOT / "data" / f"native-renderer-{output_port}.json"
         self._build(width, height, fps)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._telemetry)
@@ -606,7 +607,7 @@ class StudioWindow(QMainWindow):
     def save_snapshot(self):
         image, _ = self.frames.latest()
         if image:
-            folder = Path(__file__).resolve().parents[2] / "logs" / "screenshots"
+            folder = ROOT / "logs" / "screenshots"
             folder.mkdir(parents=True, exist_ok=True)
             target = folder / time.strftime("直播画面-%Y%m%d-%H%M%S.png")
             if image.save(str(target)):

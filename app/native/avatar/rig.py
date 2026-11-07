@@ -9,7 +9,9 @@ from PySide6.QtGui import QColor, QImage, QPen, QTransform
 
 from ..costumes import draw_costume
 
-MODEL_PATH = Path(__file__).resolve().parents[3] / "assets/avatars/deepy/model.json"
+from ...paths import RESOURCE_ROOT
+
+MODEL_PATH = RESOURCE_ROOT / "assets/avatars/deepy/model.json"
 REQUIRED_CLOTHES = {"clothes", "skirt", "sleeve_left", "sleeve_right"}
 
 
