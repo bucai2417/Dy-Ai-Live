@@ -8,12 +8,13 @@ import time
 
 
 def run(report_path):
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    os.environ["QT_QPA_PLATFORM"] = "windows" if os.name == "nt" else "offscreen"
     os.environ["INGEST"] = "mock"
     os.environ["TTS_ENGINE"] = "none"
     os.environ["LLM_API_KEY"] = ""
     import uvicorn
-    from PySide6.QtCore import QTimer, qVersion
+    from PySide6.QtCore import QTimer, Qt, qVersion
+    from PySide6.QtGui import QFont, QFontDatabase
     from PySide6.QtWidgets import QApplication
     from . import __version__
     from .paths import ROOT, RESOURCE_ROOT
@@ -23,6 +24,10 @@ def run(report_path):
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
     application = QApplication([])
+    application.setFont(QFont("Microsoft YaHei UI", 10))
+    font_count = len(QFontDatabase.families())
+    if not font_count:
+        raise RuntimeError("原生平台未加载任何系统字体")
     LayeredAvatar()
     listener = socket.socket()
     listener.bind(("127.0.0.1", 0))
@@ -42,6 +47,7 @@ def run(report_path):
         time.sleep(0.05)
     base_url = f"http://127.0.0.1:{port}"
     window = StudioWindow(base_url, 720, 1280, 30, output_port, True)
+    window.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
     window.show()
     result = {"ok": False}
     deadline = time.monotonic() + 30
@@ -53,7 +59,7 @@ def run(report_path):
             result.update(ok=service_ready(base_url) and image.save(str(screenshot)),
                           version=__version__, qt=qVersion(), websocket=True,
                           runtime_root=str(ROOT), resource_root=str(RESOURCE_ROOT),
-                          frame_size=[image.width(), image.height()], frames=sequence)
+                          frame_size=[image.width(), image.height()], frames=sequence, font_families=font_count)
             window.close()
             application.quit()
         elif time.monotonic() > deadline:
