@@ -1,0 +1,26 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.moc3 binary
+*.webm binary
+*.mp4 binary
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.flac binary
+
+tools/douyin_sig/webmssdk.js export-ignore
+web/vendor export-ignore
+web/models/haru export-ignore

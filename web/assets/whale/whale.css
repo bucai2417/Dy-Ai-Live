@@ -1,0 +1,107 @@
+/* 深蓝 (Deepy) · 程序化 Live2D 形象 · 舞台样式
+ * 只在启用 rig 形象时挂上，不影响原 Live2D 模型的渲染。
+ */
+.whale-rig-wrap{
+  position:absolute;
+  left:50%;
+  bottom:0;
+  transform:translateX(-50%);
+  /* 用高度撑满、宽度自适应，再由 JS 控制 height/bottom */
+  height:100%;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  pointer-events:none;
+  filter:drop-shadow(0 18px 34px rgba(4,18,40,.55));
+  transition:height .3s ease;
+}
+/* 关键：用 max-height + object-fit 保证整条鲸尾都在画面里，
+   不会被容器裁掉。SVG 按 preserveAspectRatio=xMidYMax 贴底对齐。 */
+.whale-rig-wrap > svg{
+  height:100%;
+  width:auto;
+  max-width:100vw;
+  max-height:100%;
+  display:block;
+  overflow:visible;
+}
+/* 说话时给角色一点极轻的整体呼吸感，避免"贴图感" */
+body.speaking .whale-rig-wrap > svg{
+  animation:rigSpeak 1.5s ease-in-out infinite;
+}
+@keyframes rigSpeak{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-3px)}
+}
+/* 降低动效偏好时不抖 */
+@media (prefers-reduced-motion: reduce){
+  body.speaking .whale-rig-wrap > svg{animation:none}
+}
+
+/* ---------- AI 立绘形象（WhaleArt） ----------
+ * 与 SVG 版共用 .whale-rig-wrap 的布局，但内容是一张透明 PNG。
+ * 动画 transform 由 art.js 写在内层 .wa-stage 上 —— 绝对不能写在
+ * .whale-rig-wrap 上，applyRigLook() 会用布局 transform 把它整条覆盖。
+ */
+.whale-art-wrap > .wa-stage{
+  position:relative;
+  display:block;
+  height:100%;
+  /* max-content：让 stage 的框正好等于图片框。贴片是按 stage 的百分比定位的，
+     两者只要有一点不一致，贴片就会偏离眼睛/嘴的位置。 */
+  width:max-content;
+  transform-origin:50% 100%;   /* 站立角色以底部为轴 */
+  will-change:transform,filter;
+}
+/* 表情贴片（闭眼 / 闭嘴）：坐标由 .tools/build_patches.py 算出，见 deepy.patches.json */
+.whale-art-wrap .wa-patch{
+  position:absolute;
+  pointer-events:none;
+  will-change:opacity;
+}
+.whale-art-wrap > .wa-stage > img.wa-img{
+  display:block;
+  /* 宽高都交给固有比例，再用两个 max 同时约束 —— 这是唯一能既「撑满高度」
+     又「竖屏不超宽、不变形」的写法。
+     之前写 height:100% + max-width:100vw：竖屏时 width 被压到视口宽、
+     height 却不变，图片被横向压扁（实测比例误差最高 22.7%）。 */
+  width:auto;
+  height:auto;
+  max-height:100%;
+  /* 留 4% 安全边距：呼吸/歪头旋转会撑大包围盒，贴到 100vw 会被裁边。 */
+  max-width:96vw;
+  object-fit:contain;
+  -webkit-user-drag:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+/* 悬浮水珠 / 品牌蓝光晕：跟着 ParamWaterGlow 呼吸 */
+.whale-art-wrap .wa-glow{
+  position:absolute;
+  left:50%;
+  top:6%;
+  width:44%;
+  height:24%;
+  transform:translateX(-50%);
+  border-radius:50%;
+  background:radial-gradient(circle,
+      rgba(146,205,255,.55) 0%,
+      rgba(77,107,254,.20) 46%,
+      rgba(77,107,254,0) 72%);
+  filter:blur(14px);
+  mix-blend-mode:screen;
+  pointer-events:none;
+}
+/* 素材缺失时给个可见提示，避免舞台一片空白却找不到原因 */
+.whale-art-wrap.wa-missing::after{
+  content:'形象素材未找到';
+  position:absolute;
+  left:50%; bottom:8%;
+  transform:translateX(-50%);
+  font:14px/1.4 system-ui,sans-serif;
+  color:#cfe0ff;
+  background:rgba(10,24,60,.8);
+  padding:8px 14px;
+  border-radius:8px;
+  white-space:nowrap;
+}

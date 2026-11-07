@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>深蓝 Deepy · 形象调试台</title>
+<style>
+  :root{
+    --brand:#4d6bfe; --glow:#9fe4ff; --deep:#03080f; --mid:#06182b;
+    --text:#eaf6ff; --sub:#8fb3cc; --line:rgba(90,190,255,.2);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:radial-gradient(120% 90% at 50% 0%, #12456b 0%, #0a2740 38%, #05121f 70%, #03080f 100%);
+    color:var(--text); font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    display:grid; grid-template-columns:1fr 320px; height:100vh; overflow:hidden;
+  }
+  #host{position:relative;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;}
+  #host::after{
+    content:"";position:absolute;left:50%;bottom:4%;transform:translateX(-50%);
+    width:min(52vh,46vw);height:6vh;border-radius:50%;
+    background:radial-gradient(closest-side, rgba(77,107,254,.5), transparent 72%);
+    filter:blur(8px);
+  }
+  #panel{
+    background:rgba(6,20,34,.82); border-left:1px solid var(--line);
+    padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:14px;
+    backdrop-filter:blur(12px);
+  }
+  h1{font-size:15px;margin:0 0 2px;letter-spacing:.5px;}
+  .sub{font-size:11.5px;color:var(--sub);line-height:1.6;margin:0;}
+  h2{font-size:12px;color:var(--glow);margin:8px 0 2px;letter-spacing:1px;text-transform:uppercase;}
+  .row{display:flex;flex-wrap:wrap;gap:6px;}
+  button{
+    font:inherit;font-size:12px;padding:7px 11px;border-radius:9px;cursor:pointer;
+    background:rgba(20,50,80,.6);color:var(--text);border:1px solid var(--line);
+    transition:background .15s, transform .1s;
+  }
+  button:hover{background:rgba(40,90,150,.75);}
+  button:active{transform:scale(.95);}
+  button.pri{background:linear-gradient(120deg,#4d6bfe,#8f6bff);border-color:transparent;font-weight:700;}
+  .slider{margin:6px 0;}
+  .slider label{display:flex;justify-content:space-between;font-size:11.5px;color:var(--sub);}
+  .slider input{width:100%;accent-color:var(--brand);}
+  .fps{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums;}
+  @media (max-aspect-ratio:1/1){
+    body{grid-template-columns:1fr;grid-template-rows:1fr auto;}
+    #panel{max-height:46vh;border-left:none;border-top:1px solid var(--line);}
+  }
+</style>
+</head>
+<body>
+  <div id="host"></div>
+
+  <aside id="panel">
+    <div>
+      <h1>深蓝 Deepy · 形象调试台</h1>
+      <p class="sub">程序化骨骼形象，参数 ID 与 Live2D Cubism 一致。<br>
+      这里点的每个动作，都能用 WebSocket 的 <code>{"type":"reaction"}</code> 触发。</p>
+    </div>
+
+    <h2>动作 Motion</h2>
+    <div class="row" id="motions"></div>
+
+    <h2>表情 Expression</h2>
+    <div class="row" id="expressions"></div>
+
+    <h2>口型试探</h2>
+    <div class="slider">
+      <label><span>嘴张开 ParamMouthOpenY</span><span id="v-open">0.00</span></label>
+      <input type="range" id="s-open" min="0" max="1" step="0.01" value="0" />
+    </div>
+    <div class="slider">
+      <label><span>嘴形 ParamMouthForm</span><span id="v-form">0.00</span></label>
+      <input type="range" id="s-form" min="-1" max="1" step="0.01" value="0" />
+    </div>
+
+    <h2>视角 / 表演</h2>
+    <div class="slider">
+      <label><span>抬头 ParameterAngleY</span><span id="v-ay">0</span></label>
+      <input type="range" id="s-ay" min="-30" max="30" step="1" value="0" />
+    </div>
+    <div class="slider">
+      <label><span>转头 ParamAngleX</span><span id="v-ax">0</span></label>
+      <input type="range" id="s-ax" min="-30" max="30" step="1" value="0" />
+    </div>
+    <div class="row">
+      <button id="btn-demo" class="pri">▶ 自动演示一轮</button>
+      <button id="btn-reset">重置</button>
+    </div>
+
+    <p class="fps" id="fps">—</p>
+  </aside>
+
+  <script src="/static/assets/whale/rig.js"></script>
+  <script src="/static/assets/whale/art.js"></script>
+  <link rel="stylesheet" href="/static/assets/whale/whale.css" />
+  <script>
+    const host = document.getElementById('host');
+    // ?art=1 切到 AI 立绘形象，方便和手绘 SVG 版并排对比。
+    // 不加参数时保持 SVG 版，旧的截图/回归脚本不受影响。
+    const useArt = new URLSearchParams(location.search).has('art');
+    const rig = useArt ? new WhaleArt(host) : new WhaleRig(host);
+    rig.motion('idle');
+    rig.expression(1);
+    rig.start();
+    window.__rig = rig;      // 调试/截图脚本用
+    window.__rigKind = useArt ? 'art' : 'svg';
+
+    /* ---------- 动作按钮 ---------- */
+    const MO = window.WHALE_RIG.MOTIONS;
+    const mbox = document.getElementById('motions');
+    Object.keys(MO).forEach((name) => {
+      const b = document.createElement('button');
+      b.textContent = name + (MO[name].loop ? ' ↻' : '');
+      b.onclick = () => rig.motion(name);
+      mbox.appendChild(b);
+    });
+
+    /* ---------- 表情按钮 ---------- */
+    const EX = window.WHALE_RIG.EXPRESSIONS;
+    const ebox = document.getElementById('expressions');
+    EX.forEach((e, i) => {
+      const b = document.createElement('button');
+      b.textContent = `${i} ${e.name}`;
+      b.onclick = () => rig.expression(i);
+      ebox.appendChild(b);
+    });
+
+    /* ---------- 滑杆 ---------- */
+    function bindS(id, vid, param, fmt) {
+      const s = document.getElementById('s-' + id);
+      const v = document.getElementById('v-' + vid);
+      s.addEventListener('input', () => {
+        const val = Number(s.value);
+        v.textContent = fmt ? fmt(val) : val;
+        rig.setParameterValueById(param, val);
+      });
+    }
+    const f2 = (n) => n.toFixed(2);
+    bindS('open', 'open', 'ParamMouthOpenY', f2);
+    bindS('form', 'form', 'ParamMouthForm', f2);
+    bindS('ay', 'ay', 'ParamAngleY');
+    bindS('ax', 'ax', 'ParamAngleX');
+
+    /* ---------- 鼠标视线跟随 ---------- */
+    host.addEventListener('mousemove', (e) => {
+      const r = host.getBoundingClientRect();
+      rig.focus(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
+    });
+
+    /* ---------- 自动演示：把整套动作串一遍 ---------- */
+    const demoSeq = [
+      ['wave', 1800], ['happy', 1500], ['talk', 2600], ['spout', 2200],
+      ['shy', 1900], ['nod', 1000], ['shake', 1100], ['sway', 1200], ['idle', 2000],
+    ];
+    const demoExpr = [1, 2, 7, 3, 4, 1, 3, 5, 0];
+    let demoing = false;
+    document.getElementById('btn-demo').onclick = async () => {
+      if (demoing) return;
+      demoing = true;
+      for (let i = 0; i < demoSeq.length; i++) {
+        const [name, wait] = demoSeq[i];
+        rig.motion(name);
+        rig.expression(demoExpr[i]);
+        await new Promise((r) => setTimeout(r, wait));
+      }
+      rig.expression(1);
+      demoing = false;
+    };
+    document.getElementById('btn-reset').onclick = () => {
+      rig.expression(0);
+      rig.motion('idle');
+      ['s-open', 's-form', 's-ay', 's-ax'].forEach((id) => { document.getElementById(id).value = 0; });
+      ['v-open', 'v-form'].forEach((id) => { document.getElementById(id).textContent = '0.00'; });
+      ['v-ay', 'v-ax'].forEach((id) => { document.getElementById(id).textContent = '0'; });
+      rig.setParameterValueById('ParamMouthOpenY', 0);
+      rig.setParameterValueById('ParamMouthForm', 0);
+      rig.setParameterValueById('ParamAngleY', 0);
+      rig.setParameterValueById('ParamAngleX', 0);
+    };
+
+    /* ---------- FPS ---------- */
+    let last = performance.now(), frames = 0;
+    setInterval(() => {
+      const now = performance.now();
+      const fps = frames / ((now - last) / 1000);
+      document.getElementById('fps').textContent = `渲染 ${fps.toFixed(0)} fps · 参数 ${rig.getParameterCount()} 个 · 动作 ${Object.keys(MO).length} 个 · 表情 ${EX.length} 个`;
+      frames = 0; last = now;
+    }, 1000);
+    (function tick(){ frames++; requestAnimationFrame(tick); })();
+  </script>
+</body>
+</html>

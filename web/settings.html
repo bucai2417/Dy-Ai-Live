@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>大肥鱼 · 后台配置</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%99%3C/text%3E%3C/svg%3E" />
+<style>
+:root{
+  --bg:#040b13; --panel:rgba(13,30,48,.82); --brd:rgba(90,190,255,.16);
+  --txt:#e9f5ff; --sub:#8fb3cc; --acc:#39d0ff; --ok:#3ddc84; --warn:#ffbe3d; --bad:#ff5c7a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(90% 60% at 50% -10%,#123c5c 0%,#071726 42%,#040b13 100%);
+  color:var(--txt);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;min-height:100vh;
+  padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:10;backdrop-filter:blur(14px);
+  background:rgba(4,11,19,.86);border-bottom:1px solid var(--brd);
+  padding:calc(12px + env(safe-area-inset-top,0px)) 18px 12px}
+.hd{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:17px;margin:0;display:flex;align-items:center;gap:9px}
+h1 .tag{font-size:11px;color:var(--sub);border:1px solid var(--brd);padding:2px 8px;border-radius:999px;font-weight:400}
+.spacer{flex:1}
+button{cursor:pointer;border:1px solid var(--brd);background:rgba(57,208,255,.12);color:var(--acc);
+  padding:8px 15px;border-radius:10px;font-size:13px;font-weight:600;font-family:inherit;transition:.15s}
+button:hover{background:rgba(57,208,255,.22)}
+button:active{transform:scale(.97)}
+button.primary{background:linear-gradient(90deg,#2bb7ff,#7a6bff);color:#03121e;border:none}
+button.ghost{background:transparent}
+button.danger{background:rgba(255,92,122,.13);color:var(--bad)}
+button:disabled{opacity:.5;cursor:not-allowed}
+
+.layout{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:200px 1fr;gap:16px;padding:16px 18px}
+nav{position:sticky;top:76px;align-self:start;display:flex;flex-direction:column;gap:4px}
+nav a{display:block;padding:9px 12px;border-radius:10px;color:var(--sub);text-decoration:none;font-size:13.5px;
+  border:1px solid transparent;transition:.15s}
+nav a:hover{background:rgba(57,208,255,.08);color:var(--txt)}
+nav a.on{background:rgba(57,208,255,.14);color:var(--acc);border-color:rgba(57,208,255,.3);font-weight:600}
+
+.panel{background:var(--panel);border:1px solid var(--brd);border-radius:16px;padding:18px;margin-bottom:16px;
+  backdrop-filter:blur(14px);box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.panel h2{font-size:14px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+.panel .desc{font-size:12px;color:var(--sub);margin:0 0 16px;line-height:1.6}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;color:var(--sub);margin-bottom:6px}
+.field .hint{font-size:11.5px;color:#6b8ba3;margin-top:5px;line-height:1.5}
+input[type=text],input[type=password],input[type=number],select,textarea{
+  width:100%;background:rgba(0,0,0,.35);color:var(--txt);border:1px solid var(--brd);
+  border-radius:10px;padding:10px 12px;font-size:13.5px;font-family:inherit;outline:none;transition:.15s}
+input:focus,textarea:focus,select:focus{border-color:rgba(57,208,255,.55);box-shadow:0 0 0 3px rgba(57,208,255,.09)}
+textarea{min-height:90px;resize:vertical;line-height:1.65}
+textarea.tall{min-height:130px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.switch{display:flex;align-items:center;gap:10px;padding:9px 0}
+.switch input{appearance:none;width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.14);
+  position:relative;cursor:pointer;transition:.2s;flex:none;border:none;outline:none}
+.switch input:checked{background:linear-gradient(90deg,#2bb7ff,#39d0ff)}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+  background:#fff;transition:.2s}
+.switch input:checked::after{left:21px}
+.switch span{font-size:13px}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,92,122,.12);
+  border:1px solid rgba(255,92,122,.28);color:#ffb3c4;padding:4px 10px;border-radius:999px;font-size:12.5px}
+.chip b{cursor:pointer;font-weight:700;opacity:.75}
+.chip b:hover{opacity:1;color:#fff}
+.addrow{display:flex;gap:8px;margin-top:8px}
+.addrow input{flex:1}
+
+.status{font-size:12.5px;padding:9px 13px;border-radius:10px;margin-top:10px;display:none;line-height:1.55}
+.status.show{display:block}
+.status.ok{background:rgba(61,220,132,.12);border:1px solid rgba(61,220,132,.3);color:#8ff0b6}
+.status.err{background:rgba(255,92,122,.12);border:1px solid rgba(255,92,122,.3);color:#ffb3c4}
+.status.info{background:rgba(57,208,255,.1);border:1px solid rgba(57,208,255,.28);color:#9fe4ff}
+
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);z-index:99;
+  background:linear-gradient(90deg,#2bb7ff,#7a6bff);color:#03121e;font-weight:700;font-size:13.5px;
+  padding:11px 22px;border-radius:12px;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 8px 28px rgba(43,183,255,.4)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+.list-item{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.list-item textarea{min-height:52px;flex:1}
+.list-item .del{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+  background:rgba(255,92,122,.12);color:var(--bad);border:1px solid rgba(255,92,122,.25);cursor:pointer;font-size:16px}
+
+/* ---------------- 今日数据面板 ---------------- */
+.sub-h{
+  margin:18px 0 9px;font-size:12.5px;color:var(--acc);
+  padding-left:9px;border-left:3px solid var(--acc);line-height:1.3;
+}
+.statgrid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));
+  gap:8px;margin-top:8px;
+}
+.statbox{
+  background:rgba(0,0,0,.26);border:1px solid var(--brd);border-radius:10px;
+  padding:9px 10px;text-align:center;
+}
+.statbox b{
+  display:block;font-size:16px;font-variant-numeric:tabular-nums;
+  color:#fff;line-height:1.2;
+}
+.statbox i{display:block;font-style:normal;font-size:10.5px;color:var(--sub);margin-top:3px;}
+
+/* ---------------- 滑块 ---------------- */
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:999px;
+  background:rgba(57,208,255,.18);outline:none;padding:0;border:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;border-radius:50%;cursor:pointer;
+  background:linear-gradient(160deg,#5cd8ff,#3a7bff);border:2px solid #0a1c2b;
+  box-shadow:0 2px 10px rgba(57,208,255,.55);
+}
+.val{float:right;color:var(--acc);font-weight:700;font-variant-numeric:tabular-nums;font-size:12px}
+
+/* ---------------- 上传区 ---------------- */
+.dropzone{
+  border:2px dashed rgba(57,208,255,.34);border-radius:14px;padding:22px 16px;text-align:center;
+  cursor:pointer;transition:.16s;background:rgba(57,208,255,.04);margin-top:6px;
+}
+.dropzone:hover,.dropzone.drag{border-color:var(--acc);background:rgba(57,208,255,.11)}
+.dz-ico{font-size:24px;margin-bottom:6px}
+.dz-main{font-size:13.5px;font-weight:600;color:var(--txt)}
+.dz-sub{font-size:11.5px;color:var(--sub);margin-top:6px;line-height:1.6}
+.dz-sub code{background:rgba(0,0,0,.35);padding:1px 5px;border-radius:5px;color:#9fe4ff}
+
+.model-list{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+.model-row{display:flex;align-items:center;gap:10px;font-size:12.5px;
+  background:rgba(0,0,0,.24);border:1px solid var(--brd);border-radius:10px;padding:8px 12px}
+.model-row .nm{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-row .meta{color:var(--sub);font-size:11.5px;flex:none}
+.model-row .bad{color:var(--bad)}
+.model-row .ok{color:var(--ok)}
+.model-row .rm{flex:none;cursor:pointer;color:var(--bad);opacity:.8;font-weight:700}
+.model-row .rm:hover{opacity:1}
+
+/* ---------------- 规则卡片 ---------------- */
+.rule-card{
+  background:rgba(0,0,0,.26);border:1px solid var(--brd);border-radius:13px;
+  padding:13px 14px;margin-bottom:11px;
+}
+.rule-head{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.rule-head .idx{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;
+  background:rgba(57,208,255,.16);color:var(--acc);font-size:11.5px;font-weight:800}
+.rule-head select{flex:none;width:auto;min-width:104px;padding:6px 9px;font-size:12.5px}
+.rule-head .spacer{flex:1}
+.rule-head .rm{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  background:rgba(255,92,122,.12);color:var(--bad);border:1px solid rgba(255,92,122,.25);
+  cursor:pointer;font-size:15px}
+.rule-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.rule-grid .field{margin-bottom:0}
+.rule-grid label{font-size:11.5px}
+.rule-grid input,.rule-grid select,.rule-grid textarea{font-size:12.5px;padding:7px 10px}
+.rule-grid textarea{min-height:46px}
+
+@media(max-width:860px){
+  .rule-grid{grid-template-columns:1fr}
+  .model-row{flex-wrap:wrap;gap:6px}
+}
+
+@media(max-width:860px){
+  .layout{grid-template-columns:1fr;padding:12px}
+  nav{position:static;flex-direction:row;overflow-x:auto;padding-bottom:6px;gap:6px;top:0}
+  nav a{white-space:nowrap;flex:none;font-size:12.5px;padding:7px 11px}
+  .grid2,.grid3{grid-template-columns:1fr}
+  header{padding:10px 12px}
+  h1{font-size:15px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="hd">
+    <h1>大肥鱼 <span>后台配置</span></h1>
+    <div class="spacer"></div>
+    <button class="ghost" onclick="location.href='/console'">运营控制台</button>
+    <button class="ghost" onclick="location.href='/stage'" target="_blank">直播画面</button>
+    <button class="primary" id="btnSave">保存并生效</button>
+  </div>
+</header>
+
+<div class="layout">
+  <nav id="nav">
+    <a href="#sec-persona" class="on">人设与话术规则</a>
+    <a href="#sec-stage">模型与舞台</a>
+    <a href="#sec-interact">互动规则</a>
+    <a href="#sec-llm">大模型 LLM</a>
+    <a href="#sec-tts">语音 TTS</a>
+    <a href="#sec-ingest">弹幕接入</a>
+    <a href="#sec-music">音乐播放器</a>
+    <a href="#sec-fallback">兜底策略</a>
+    <a href="#sec-pace">播报节奏</a>
+    <a href="#sec-lines">话术库</a>
+    <a href="#sec-filters">过滤与安全</a>
+    <a href="#sec-scoring">打分权重</a>
+  </nav>
+
+  <main id="main">
+    <!-- ================= 人设 ================= -->
+    <section class="panel" id="sec-persona">
+      <h2>🐟 人设与话术规则</h2>
+      <p class="desc">决定 AI 的性格、说话方式和底线。改完保存即刻生效，不需要重启。</p>
+      <div class="grid2">
+        <div class="field">
+          <label>主播名字</label>
+          <input type="text" id="persona-name" placeholder="大肥鱼" />
+          <div class="hint">会显示在直播画面左上角和页面标题</div>
+        </div>
+        <div class="field">
+          <label>性格描述</label>
+          <input type="text" id="persona-style" placeholder="嘴贫、爱吐槽、热心…" />
+          <div class="hint">一句话概括语气，越具体越像人</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>必须遵守的规则（每行一条）</label>
+        <textarea id="persona-rules" class="tall"></textarea>
+        <div class="hint">这是写进 system prompt 的硬约束。建议保留"不编造价格/医疗承诺""每次不超过 60 字"这类底线。</div>
+      </div>
+      <div class="status" id="status-persona"></div>
+    </section>
+
+    <!-- ================= 模型与舞台 ================= -->
+    <section class="panel" id="sec-stage">
+      <h2>🎭 模型与舞台</h2>
+      <p class="desc">导入 Live2D 模型，并调整直播中模型的大小和位置。改完保存，直播画面立刻跟着变，不用刷新。</p>
+
+      <div class="field">
+        <label>当前模型</label>
+        <select id="stage-model"></select>
+        <div class="hint" id="modelHint">正在读取模型列表…</div>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <div class="dz-ico">📦</div>
+        <div class="dz-main">把模型 <b>.zip</b> 拖到这里，或点击选择文件</div>
+        <div class="dz-sub">压缩包里要有 <code>*.model3.json</code> 和 <code>.moc3</code>（Cubism 3/4/5）</div>
+        <input type="file" id="modelFile" accept=".zip" hidden />
+      </div>
+      <div class="status" id="status-upload"></div>
+      <div id="modelList" class="model-list"></div>
+
+      <div class="grid2" style="margin-top:18px">
+        <div class="field">
+          <label>大小 <span class="val" id="v-scale">100%</span></label>
+          <input type="range" id="stage-scale" min="0.4" max="2.2" step="0.02" />
+          <div class="hint">想让人物更大更近就调大</div>
+        </div>
+        <div class="field">
+          <label>透明度 <span class="val" id="v-opacity">100%</span></label>
+          <input type="range" id="stage-opacity" min="0.2" max="1" step="0.02" />
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>水平位置 <span class="val" id="v-offx">居中</span></label>
+          <input type="range" id="stage-offset_x" min="-0.5" max="0.5" step="0.01" />
+          <div class="hint">负数往左，正数往右</div>
+        </div>
+        <div class="field">
+          <label>垂直位置 <span class="val" id="v-offy">贴底</span></label>
+          <input type="range" id="stage-offset_y" min="-0.4" max="0.4" step="0.01" />
+          <div class="hint">负数往上，正数往下（0 为贴底）</div>
+        </div>
+      </div>
+
+      <div class="switch"><input type="checkbox" id="stage-flip" /><span>水平翻转（镜像）</span></div>
+      <div class="switch"><input type="checkbox" id="stage-auto_layout" /><span>自动适配屏幕方向（推荐开）</span></div>
+
+      <h3 class="sub-h">🖥 画面显示哪些块</h3>
+      <p class="desc" style="margin-top:0">关掉的块不会出现在直播画面上，后台数据依然正常统计。</p>
+      <div class="switch"><input type="checkbox" id="stage-show_danmu" /><span>弹幕列表</span></div>
+      <div class="switch"><input type="checkbox" id="stage-show_subtitle" /><span>AI 字幕</span></div>
+      <div class="switch"><input type="checkbox" id="stage-show_datapods" /><span>今日数据气泡（token / 花费 / 对话数）</span></div>
+      <div class="switch"><input type="checkbox" id="stage-show_ranking" /><span>土豪榜</span></div>
+      <div class="switch"><input type="checkbox" id="stage-show_ballpit" /><span>送礼观众漂浮气泡</span></div>
+      <div class="switch"><input type="checkbox" id="stage-show_badges" /><span>语音 / 大脑状态徽章</span></div>
+
+      <h3 class="sub-h">🎈 漂浮气泡手感</h3>
+      <p class="desc" style="margin-top:0">觉得飞太快就把速度调小；嫌乱就减少数量或直接关掉上面那个开关。</p>
+      <div class="grid2">
+        <div class="field">
+          <label>飘动速度 <span class="val" id="v-ballspeed">1.0×</span></label>
+          <input type="range" id="stage-ball_speed" min="0.1" max="3" step="0.1" />
+          <div class="hint">0.3 慢悠悠，2.0 很活跃</div>
+        </div>
+        <div class="field">
+          <label>气泡大小 <span class="val" id="v-ballsize">100%</span></label>
+          <input type="range" id="stage-ball_size" min="0.6" max="1.8" step="0.05" />
+        </div>
+      </div>
+      <div class="field">
+        <label>同时显示数量 <span class="val" id="v-ballmax">8 个</span></label>
+        <input type="range" id="stage-ball_max" min="0" max="10" step="1" />
+        <div class="hint">只显示礼物榜前 N 名，0 等于不显示</div>
+      </div>
+      <div class="switch"><input type="checkbox" id="stage-ball_bounce" /><span>碰边回弹（关掉则穿墙循环）</span></div>
+
+      <h3 class="sub-h">🏆 排行榜样式</h3>
+      <div class="field">
+        <label>显示前几名 <span class="val" id="v-rankmax">3 名</span></label>
+        <input type="range" id="stage-rank_max" min="1" max="10" step="1" />
+      </div>
+      <div class="switch"><input type="checkbox" id="stage-rank_effect" /><span>前三名专属特效（金光 / 流光 / 奖牌）</span></div>
+
+      <div class="addrow" style="margin-top:14px">
+        <button id="btnPreviewStage">打开预览</button>
+        <button id="btnResetStage" class="ghost">重置大小位置</button>
+      </div>
+      <div class="status" id="status-stage"></div>
+    </section>
+
+    <!-- ================= 互动规则 ================= -->
+    <section class="panel" id="sec-interact">
+      <h2>🎮 互动规则</h2>
+      <p class="desc">
+        观众的动作真的能改变画面。命中规则时可以做三件事：
+        <b>播动作/表情</b>、<b>放视觉特效</b>、<b>说一句台词</b>。
+        台词留空就只做画面反馈，不占用说话机会。
+      </p>
+
+      <div class="switch"><input type="checkbox" id="interact-enabled" /><span>启用互动规则</span></div>
+      <div id="rulesWrap" style="margin-top:14px"></div>
+      <button id="btnAddRule">+ 添加一条规则</button>
+      <div class="status" id="status-interact"></div>
+    </section>
+
+    <!-- ================= LLM ================= -->
+    <section class="panel" id="sec-llm">
+      <h2>🧠 大模型 LLM</h2>
+      <p class="desc">任何 OpenAI 兼容接口都能用（DeepSeek、豆包、通义、Kimi、Ollama…）。留空则使用内置离线话术引擎。</p>
+      <div class="field">
+        <label>接口地址 Base URL</label>
+        <input type="text" id="llm-base_url" placeholder="https://api.deepseek.com/v1" />
+        <div class="hint">结尾不要带 /chat/completions，程序会自动补</div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>API Key</label>
+          <input type="password" id="llm-api_key" placeholder="sk-..." autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>模型名</label>
+          <input type="text" id="llm-model" placeholder="deepseek-chat" />
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>温度（越高越活泼）</label>
+          <input type="number" id="llm-temperature" step="0.05" min="0" max="2" />
+        </div>
+        <div class="field">
+          <label>最大输出 token</label>
+          <input type="number" id="llm-max_tokens" step="10" min="30" max="1000" />
+        </div>
+      </div>
+      <div class="field">
+        <label>人设下发方式</label>
+        <select id="llm-prompt_mode">
+          <option value="auto">自动探测（推荐）</option>
+          <option value="system">标准 system 消息</option>
+          <option value="user">并入 user 消息</option>
+        </select>
+        <div class="hint">
+          有些中转/渠道会把 system 提示词整个丢掉，导致人设完全不生效。
+          自动探测会发一句探针确认；探不通就自动改用 user 下发。
+        </div>
+      </div>
+
+      <h3 class="sub-h">💰 计价（直播画面自动换算）</h3>
+      <p class="desc" style="margin-top:0">
+        按你实际套餐填。直播画面会用这两个价格把今日 token 换算成金额，单位：元 / 百万 token。
+      </p>
+      <div class="grid2">
+        <div class="field">
+          <label>输入价格（元/百万 token）</label>
+          <input type="number" id="llm-price_in" step="0.1" min="0" max="9999" />
+          <div class="hint">DeepSeek 约 2 元，GPT-4o 约 18 元</div>
+        </div>
+        <div class="field">
+          <label>输出价格（元/百万 token）</label>
+          <input type="number" id="llm-price_out" step="0.1" min="0" max="9999" />
+          <div class="hint">一般比输入贵 3~4 倍</div>
+        </div>
+      </div>
+
+      <div class="addrow" style="margin-top:4px">
+        <button id="btnTestLLM">测试连接</button>
+      </div>
+      <div class="status" id="status-llm"></div>
+
+      <h3 class="sub-h">📊 今日数据</h3>
+      <div class="statgrid">
+        <div class="statbox"><b id="stTokens">0</b><i>token 消耗</i></div>
+        <div class="statbox"><b id="stCost">0.00</b><i>估算花费(元)</i></div>
+        <div class="statbox"><b id="stReplies">0</b><i>对话次数</i></div>
+        <div class="statbox"><b id="stGifts">0</b><i>收到礼物</i></div>
+        <div class="statbox"><b id="stGiftValue">0</b><i>礼物总值</i></div>
+        <div class="statbox"><b id="stOffline">0</b><i>离线兜底</i></div>
+      </div>
+      <div class="hint" id="statNote" style="margin-top:6px"></div>
+    </section>
+
+    <!-- ================= TTS ================= -->
+    <section class="panel" id="sec-tts">
+      <h2>🔊 语音 TTS</h2>
+      <p class="desc">默认使用微软 Edge 免费神经网络语音，无需任何 Key。</p>
+      <div class="grid2">
+        <div class="field">
+          <label>语音引擎</label>
+          <select id="tts-engine">
+            <option value="edge">edge-tts（免费在线）</option>
+            <option value="none">关闭语音（只显示字幕）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>音色</label>
+          <select id="tts-voice">
+            <option value="zh-CN-XiaoyiNeural">晓伊 · 活泼女声</option>
+            <option value="zh-CN-XiaoxiaoNeural">晓晓 · 温柔女声</option>
+            <option value="zh-CN-YunxiNeural">云希 · 阳光男声</option>
+            <option value="zh-CN-YunyangNeural">云扬 · 播音男声</option>
+            <option value="zh-CN-YunjianNeural">云健 · 浑厚男声</option>
+            <option value="zh-CN-XiaomengNeural">晓梦 · 少女音</option>
+            <option value="zh-CN-XiaoshuangNeural">晓双 · 童声</option>
+            <option value="zh-CN-liaoning-XiaobeiNeural">晓北 · 东北话</option>
+            <option value="zh-CN-shaanxi-XiaoniNeural">晓妮 · 陕西话</option>
+            <option value="zh-HK-HiuMaanNeural">曉曼 · 粤语</option>
+            <option value="zh-TW-HsiaoChenNeural">曉臻 · 台湾腔</option>
+          </select>
+          <div class="hint" id="voiceHint"></div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>语速</label>
+          <input type="text" id="tts-rate" placeholder="+8%" />
+          <div class="hint">如 +10% 更快、-10% 更慢</div>
+        </div>
+        <div class="field">
+          <label>音量</label>
+          <input type="text" id="tts-volume" placeholder="+0%" />
+        </div>
+      </div>
+      <div class="addrow" style="margin-top:4px">
+        <input type="text" id="ttsPreviewText" placeholder="试听文本，留空用默认" />
+        <button id="btnPreviewTTS">试听</button>
+      </div>
+      <div class="status" id="status-tts"></div>
+      <audio id="ttsAudio" style="display:none"></audio>
+    </section>
+
+    <!-- ================= 接入 ================= -->
+    <section class="panel" id="sec-ingest">
+      <h2>📡 弹幕接入</h2>
+      <p class="desc">三种来源。抖音真实接入会用本机浏览器打开直播间采集（需能启动 Chrome/Edge）。</p>
+
+      <div class="switch big"><input type="checkbox" id="ingest-enabled" /><span>启用弹幕接入（总开关）</span></div>
+      <p class="desc" style="margin-top:0">关掉后完全不连抖音、不开浏览器，适合调试界面或临时停播。保存后会立即生效并关闭已启动的浏览器。</p>
+
+      <div class="grid2">
+        <div class="field">
+          <label>接入方式</label>
+          <select id="ingest-source">
+            <option value="douyin_direct">抖音直播间（直连，不开浏览器）</option>
+            <option value="douyin">抖音直播间（浏览器采集）</option>
+            <option value="bridge">弹幕助手桥接</option>
+            <option value="mock">模拟弹幕（演示）</option>
+          </select>
+          <div class="hint">直连更快、不占内存、直播间看不到你在看；浏览器采集作为直连失效时的备选</div>
+        </div>
+        <div class="field">
+          <label>抖音房间号 / 链接</label>
+          <input type="text" id="ingest-douyin_room" placeholder="541482891580 或完整链接" />
+          <div class="hint">填 https://live.douyin.com/xxx 或纯数字都行</div>
+        </div>
+      </div>
+      <div class="field" style="max-width:280px">
+        <label>桥接端口</label>
+        <input type="number" id="ingest-bridge_port" min="1" max="65535" />
+        <div class="hint">弹幕助手把消息推到 ws://127.0.0.1:该端口</div>
+      </div>
+      <div class="addrow" style="margin-top:4px">
+        <button id="btnRestartIngest">保存并重连接入</button>
+        <button id="btnKillBrowser" class="ghost">强制关闭采集浏览器</button>
+      </div>
+      <div class="status" id="status-ingest"></div>
+      <div class="status" id="status-ingest-live"></div>
+
+      <div class="hint" style="margin-top:14px">
+        <b>直播画面窗口（不依赖浏览器）</b><br>
+        使用 Python + PySide6 原生绘制，无需浏览器渲染。<br>
+        独立线程持续产出画面；OBS 请按工作台「画面输出」说明接入视频流，
+        工作台最小化后仍持续输出。
+      </div>
+      <div class="addrow" style="margin-top:6px">
+        <button id="btnRenderer" class="ghost">打开直播画面窗口</button>
+        <button id="btnRendererStop" class="ghost">关闭画面窗口</button>
+      </div>
+      <div class="status" id="status-renderer"></div>
+    </section>
+
+    <!-- ================= 音乐播放器 ================= -->
+    <section class="panel" id="sec-music">
+      <h2>🎵 音乐播放器</h2>
+      <p class="desc">观众发「点歌 晴天」入队，送礼点歌可插队；AI 也能主动点歌和报歌名。</p>
+
+      <div class="switch big"><input type="checkbox" id="music-enabled" /><span>启用音乐播放器</span></div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div class="switch"><input type="checkbox" id="music-autoplay" /><span>队列有歌就自动播</span></div>
+        <div class="switch"><input type="checkbox" id="music-show_player" /><span>直播画面显示播放器</span></div>
+        <div class="switch"><input type="checkbox" id="music-gift_priority" /><span>送礼点歌可插队优先</span></div>
+        <div class="switch"><input type="checkbox" id="music-ai_dj" /><span>允许 AI 主动点歌 / 报歌名</span></div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>礼物优先门槛（抖币价值）</label>
+          <input type="number" id="music-gift_min" min="0" max="100000" step="1" />
+          <div class="hint">送够这个价值的礼物，「点歌 X」才会插队到队列前面</div>
+        </div>
+        <div class="field">
+          <label>音量 <span class="val" id="val-music-volume">60%</span></label>
+          <input type="range" id="music-volume" min="0" max="1" step="0.05" />
+        </div>
+        <div class="field">
+          <label>AI 说话时音乐压低到 <span class="val" id="val-music-duck">35%</span></label>
+          <input type="range" id="music-duck" min="0" max="1" step="0.05" />
+          <div class="hint">100% = 不压低，音乐和说话同时响</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>音源顺序</label>
+        <input type="text" id="music-providers" placeholder="local,netease,qq" />
+        <div class="hint">从左到右依次尝试。local=本地 music/ 目录，netease=网易云，qq=QQ音乐</div>
+      </div>
+
+      <div class="field">
+        <label>QQ 音乐 Cookie（可选，能显著提高可播率）</label>
+        <textarea id="music-cookie" rows="2" placeholder="uin=xxx; qm_keyst=xxx; qqmusic_key=xxx"></textarea>
+        <div class="hint">浏览器登录 y.qq.com 后导出 Cookie 粘贴进来。留空则只用匿名可用曲目。</div>
+      </div>
+
+      <div class="addrow" style="margin-top:6px">
+        <button id="btnMusicTest">测试点歌</button>
+        <input type="text" id="music-test-q" placeholder="歌名，如 晴天" style="max-width:180px" />
+        <button id="btnMusicNext">切歌</button>
+        <button id="btnMusicStop">停止</button>
+      </div>
+      <div class="status" id="status-music"></div>
+      <div id="music-queue-view" style="margin-top:8px"></div>
+    </section>
+
+    <!-- ================= 兜底 ================= -->
+    <section class="panel" id="sec-fallback">
+      <h2>🛟 兜底策略</h2>
+      <p class="desc">模型不可用时（没配 Key / Key 失效 / 网络断）走什么逻辑。</p>
+      <div class="switch big"><input type="checkbox" id="fb-offline_reply" /><span>无模型时用内置话术回复</span></div>
+      <p class="desc" style="margin-top:0">关掉后模型不可用就不说话，避免满屏「嗯，说得好有道理」这类台词。</p>
+      <div class="switch big"><input type="checkbox" id="fb-offline_voice" /><span>兜底语音也出声</span></div>
+      <p class="desc" style="margin-top:0">关掉后兜底台词只显示字幕、不播语音，适合静音试运行。</p>
+
+      <h3 class="sub-h">🚫 预设台词</h3>
+      <p class="desc" style="margin-top:0">
+        下面这些是<b>不经过模型</b>、直接用模板拼出来的句子。想画面里一个字都不要预设，就把总开关关掉。
+      </p>
+      <div class="switch big"><input type="checkbox" id="tpl-enabled" /><span>允许使用预设台词（总开关）</span></div>
+      <p class="desc" style="margin-top:0">关掉后，只有模型说的话会出口，没模型时画面保持安静。</p>
+
+      <div class="grid2" style="margin-top:10px">
+        <div>
+          <div class="switch"><input type="checkbox" id="tpl-gift" /><span>送礼感谢语</span></div>
+          <div class="switch"><input type="checkbox" id="tpl-follow" /><span>关注感谢语</span></div>
+        </div>
+        <div>
+          <div class="switch"><input type="checkbox" id="tpl-welcome" /><span>进场欢迎语</span></div>
+          <div class="switch"><input type="checkbox" id="tpl-idle" /><span>冷场主动抛话题</span></div>
+        </div>
+      </div>
+      <div class="switch big" style="margin-top:8px"><input type="checkbox" id="tpl-prefer_llm" /><span>有模型时优先让模型说（不念模板）</span></div>
+      <p class="desc" style="margin-top:0">
+        开着更自然：送礼/关注/互动规则的台词会让模型即兴生成。关掉则一律用上面的固定文案。
+      </p>
+      <div class="status" id="status-tpl"></div>
+    </section>
+
+    <!-- ================= 节奏 ================= -->
+    <section class="panel" id="sec-pace">
+      <h2>⏱ 播报节奏</h2>
+      <p class="desc">直播好不好听，八成靠节奏。话太密像机器，太稀像掉线。</p>
+      <div class="grid3">
+        <div class="field">
+          <label>最小发言间隔（秒）</label>
+          <input type="number" id="pace-min_speak_gap" step="0.1" min="0" max="30" />
+          <div class="hint">建议 1.0 ~ 2.0</div>
+        </div>
+        <div class="field">
+          <label>冷场兜底（秒）</label>
+          <input type="number" id="pace-idle_chat_seconds" step="5" min="10" max="600" />
+          <div class="hint">多久没人说话就主动找话题</div>
+        </div>
+        <div class="field">
+          <label>进场合并窗口（秒）</label>
+          <input type="number" id="pace-enter_merge_window" step="1" min="0" max="60" />
+          <div class="hint">把人名攒一起欢迎，避免全是欢迎语</div>
+        </div>
+      </div>
+      <div class="field" style="max-width:280px">
+        <label>单次回复字数上限</label>
+        <input type="number" id="pace-max_reply_chars" step="5" min="15" max="200" />
+        <div class="hint">建议 50 ~ 70，太长观众没耐心</div>
+      </div>
+      <div class="switch"><input type="checkbox" id="pace-announce_enter" /><span>播报观众进场</span></div>
+      <div class="switch"><input type="checkbox" id="pace-announce_follow" /><span>播报新增关注</span></div>
+      <div class="switch"><input type="checkbox" id="pace-announce_like" /><span>播报点赞（通常关掉，太吵）</span></div>
+      <div class="status" id="status-pace"></div>
+    </section>
+
+    <!-- ================= 话术库 ================= -->
+    <section class="panel" id="sec-lines">
+      <h2>💬 话术库</h2>
+      <p class="desc">不经过大模型的固定台词，用来保证关键场景的语气稳定。支持占位符：<code>{name}</code> 用户名、<code>{gift}</code> 礼物、<code>{a}</code> 进场者。</p>
+      <div id="linesWrap"></div>
+      <div class="status" id="status-lines"></div>
+    </section>
+
+    <!-- ================= 过滤 ================= -->
+    <section class="panel" id="sec-filters">
+      <h2>🛡 过滤与安全</h2>
+      <p class="desc">可设置敏感词与长度限制。重复弹幕逐条处理，不按内容或同用户冷却忽略。</p>
+      <div class="field">
+        <label>敏感词黑名单</label>
+        <div class="chips" id="bannedChips"></div>
+        <div class="addrow">
+          <input type="text" id="bannedInput" placeholder="输入要屏蔽的词，回车添加" />
+          <button id="btnAddBanned">添加</button>
+        </div>
+        <div class="hint">命中的弹幕会被直接忽略，不播报也不回复</div>
+      </div>
+      <div class="grid3">
+        <div class="field">
+          <label>单条弹幕最大字数</label>
+          <input type="number" id="filters-max_input_chars" min="10" max="500" />
+        </div>
+      </div>
+      <div class="status" id="status-filters"></div>
+    </section>
+
+    <!-- ================= 打分 ================= -->
+    <section class="panel" id="sec-scoring">
+      <h2>🎯 打分权重</h2>
+      <p class="desc">决定"哪条弹幕值得回"。分数越高越优先，高价值还能打断当前播报。</p>
+      <div class="grid3">
+        <div class="field"><label>礼物</label><input type="number" id="scoring-gift" step="0.5" min="0" /></div>
+        <div class="field"><label>关注</label><input type="number" id="scoring-follow" step="0.5" min="0" /></div>
+        <div class="field"><label>普通聊天</label><input type="number" id="scoring-chat" step="0.1" min="0" /></div>
+        <div class="field"><label>进场</label><input type="number" id="scoring-enter" step="0.1" min="0" /></div>
+        <div class="field"><label>点赞</label><input type="number" id="scoring-like" step="0.1" min="0" /></div>
+        <div class="field"><label>提问加分</label><input type="number" id="scoring-question_bonus" step="0.1" min="0" /></div>
+      </div>
+      <div class="field" style="max-width:280px">
+        <label>点名加分（提到主播名）</label>
+        <input type="number" id="scoring-mention_bonus" step="0.1" min="0" />
+      </div>
+      <div class="addrow" style="margin-top:14px">
+        <button class="danger" id="btnReset">恢复默认配置</button>
+      </div>
+      <div class="status" id="status-scoring"></div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let CFG = null;
+let banned = [];
+let rules = [];        // 互动规则工作副本
+let MODELS = [];
+
+const LINE_SECTIONS = [
+  ['welcome',    '进场欢迎',    '{a}'],
+  ['thanks_small','小礼物感谢',  '{name} {gift}'],
+  ['thanks_big', '大礼物感谢',  '{name} {gift}'],
+  ['follow',     '关注感谢',    '{name}'],
+  ['idle_topics','冷场话题',    '无'],
+];
+
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('on'), 1900);
+}
+function setStatus(id, text, kind='ok'){
+  const el = $(id); if(!el) return;
+  el.textContent = text; el.className = 'status show ' + kind;
+}
+function clearStatus(id){ const el=$(id); if(el) el.className='status'; }
+
+/* ---------------- 今日数据 ---------------- */
+const fmtN = (n) => {
+  n = Number(n) || 0;
+  if (n >= 10000) return (n / 10000).toFixed(n >= 100000 ? 0 : 1) + '万';
+  return String(Math.round(n));
+};
+
+async function loadStats(){
+  try{
+    const r = await fetch('/api/stats');
+    const j = await r.json();
+    if (!j.ok) return;
+    const s = j.stats;
+    $('stTokens').textContent = fmtN(s.tokens);
+    $('stCost').textContent = (s.cost ?? 0).toFixed(s.cost < 0.01 ? 3 : 2);
+    $('stReplies').textContent = fmtN(s.replies);
+    $('stGifts').textContent = fmtN(s.gifts);
+    $('stGiftValue').textContent = fmtN(s.giftValue);
+    $('stOffline').textContent = fmtN(s.offlineCalls);
+
+    const parts = [`统计日期 ${s.day}`];
+    parts.push(`模型调用 ${s.llmCalls} 次`);
+    if (s.estimated) parts.push('token 为估算值（服务未回传用量）');
+    else if (s.tokens) parts.push('token 为服务端真实用量');
+    const rank = (s.ranking || []).filter(r => r.value > 0);
+    if (rank.length) parts.push('土豪榜：' + rank.map(r => `${r.rank}.${r.name}`).join('  '));
+    $('statNote').textContent = parts.join(' · ');
+  }catch(e){ /* 静默 */ }
+}
+
+loadStats();
+setInterval(loadStats, 8000);
+
+/* ---------------- 载入 ---------------- */
+async function load(){
+  const r = await fetch('/api/config');
+  CFG = await r.json();
+  await loadModels();
+
+  // stage
+  const st = CFG.stage || {};
+  $('stage-scale').value = st.scale ?? 1;
+  $('stage-opacity').value = st.opacity ?? 1;
+  $('stage-offset_x').value = st.offset_x ?? 0;
+  $('stage-offset_y').value = st.offset_y ?? 0;
+  $('stage-flip').checked = !!st.flip;
+  $('stage-auto_layout').checked = st.auto_layout !== false;
+  $('stage-show_danmu').checked = st.show_danmu !== false;
+  $('stage-show_subtitle').checked = st.show_subtitle !== false;
+  $('stage-show_datapods').checked = st.show_datapods !== false;
+  $('stage-show_ranking').checked = st.show_ranking !== false;
+  $('stage-show_ballpit').checked = st.show_ballpit !== false;
+  $('stage-show_badges').checked = st.show_badges !== false;
+  $('stage-ball_speed').value = st.ball_speed ?? 1;
+  $('stage-ball_size').value = st.ball_size ?? 1;
+  $('stage-ball_max').value = st.ball_max ?? 8;
+  $('stage-ball_bounce').checked = st.ball_bounce !== false;
+  $('stage-rank_max').value = st.rank_max ?? 3;
+  $('stage-rank_effect').checked = st.rank_effect !== false;
+  syncStageLabels();
+
+  // fallback 兜底开关
+  const fb = CFG.fallback || {};
+  $('fb-offline_reply').checked = fb.offline_reply !== false;
+  $('fb-offline_voice').checked = fb.offline_voice !== false;
+  const tp = CFG.templates || {};
+  $('tpl-enabled').checked = tp.enabled !== false;
+  $('tpl-gift').checked = tp.gift !== false;
+  $('tpl-follow').checked = tp.follow !== false;
+  $('tpl-welcome').checked = tp.welcome !== false;
+  $('tpl-idle').checked = tp.idle !== false;
+  $('tpl-prefer_llm').checked = tp.prefer_llm !== false;
+  $('ingest-enabled').checked = (CFG.ingest || {}).enabled !== false;
+
+  // music
+  const mu = CFG.music || {};
+  $('music-enabled').checked = mu.enabled !== false;
+  $('music-autoplay').checked = mu.autoplay !== false;
+  $('music-gift_priority').checked = mu.gift_priority !== false;
+  $('music-ai_dj').checked = mu.ai_dj !== false;
+  $('music-show_player').checked = mu.show_player !== false;
+  $('music-gift_min').value = mu.gift_min ?? 1;
+  $('music-volume').value = mu.volume ?? 0.6;
+  $('music-duck').value = mu.duck ?? 0.35;
+  $('music-cookie').value = mu.cookie || '';
+  $('music-providers').value = Array.isArray(mu.providers)
+    ? mu.providers.join(',') : (mu.providers || 'local,netease,qq');
+  syncMusicVolume();
+
+  // interact
+  const it = CFG.interact || { enabled: true, rules: [] };
+  $('interact-enabled').checked = it.enabled !== false;
+  rules = JSON.parse(JSON.stringify(it.rules || []));
+  renderRules();
+
+  // persona
+  $('persona-name').value = CFG.persona.name || '';
+  $('persona-style').value = CFG.persona.style || '';
+  $('persona-rules').value = CFG.persona.rules || '';
+
+  // llm
+  $('llm-base_url').value = CFG.llm.base_url || '';
+  $('llm-api_key').value = CFG.llm.api_key || '';
+  $('llm-model').value = CFG.llm.model || '';
+  $('llm-temperature').value = CFG.llm.temperature;
+  $('llm-price_in').value = CFG.llm.price_in ?? 2;
+  $('llm-price_out').value = CFG.llm.price_out ?? 8;
+  $('llm-max_tokens').value = CFG.llm.max_tokens;
+  $('llm-prompt_mode').value = CFG.llm.prompt_mode || 'auto';
+
+  // tts
+  $('tts-engine').value = CFG.tts.engine || 'edge';
+  if (![...$('tts-voice').options].some(o=>o.value===CFG.tts.voice)) {
+    const o = document.createElement('option');
+    o.value = CFG.tts.voice; o.textContent = CFG.tts.voice + '（当前）';
+    $('tts-voice').appendChild(o);
+  }
+  $('tts-voice').value = CFG.tts.voice || 'zh-CN-XiaoyiNeural';
+  $('tts-rate').value = CFG.tts.rate || '+8%';
+  $('tts-volume').value = CFG.tts.volume || '+0%';
+
+  // ingest
+  $('ingest-source').value = CFG.ingest.source || 'douyin';
+  $('ingest-douyin_room').value = CFG.ingest.douyin_room || '';
+  $('ingest-bridge_port').value = CFG.ingest.bridge_port;
+
+  // pace
+  const p = CFG.pace;
+  $('pace-min_speak_gap').value = p.min_speak_gap;
+  $('pace-idle_chat_seconds').value = p.idle_chat_seconds;
+  $('pace-enter_merge_window').value = p.enter_merge_window;
+  $('pace-max_reply_chars').value = p.max_reply_chars;
+  $('pace-announce_enter').checked = !!p.announce_enter;
+  $('pace-announce_follow').checked = !!p.announce_follow;
+  $('pace-announce_like').checked = !!p.announce_like;
+
+  // filters
+  $('filters-max_input_chars').value = CFG.filters.max_input_chars;
+  banned = [...(CFG.filters.banned_words||[])];
+  renderBanned();
+
+  // scoring
+  for (const k of ['gift','follow','chat','enter','like','question_bonus','mention_bonus']){
+    const el = $('scoring-'+k);
+    if (el) el.value = CFG.scoring[k];
+  }
+
+  renderLines();
+}
+
+/* ---------------- 模型与舞台 ---------------- */
+async function loadModels(){
+  try{
+    const r = await fetch('/api/models');
+    const j = await r.json();
+    MODELS = j.models || [];
+  }catch(e){ MODELS = []; }
+
+  const sel = $('stage-model');
+  sel.innerHTML = '';
+  if (!MODELS.length){
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = '（暂无模型，请先导入）';
+    sel.appendChild(o);
+  }
+  MODELS.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m.id;
+    // 程序化形象没有 moc3，字段不同，单独排版，避免显示 undefined
+    o.textContent = m.kind === 'rig'
+      ? `${m.name}`
+      : `${m.name}  · ${m.motions}动作 ${m.expressions}表情`;
+    sel.appendChild(o);
+  });
+
+  const cur = CFG?.stage?.model || '';
+  if (cur && !MODELS.some(m => m.id === cur)){
+    const o = document.createElement('option');
+    o.value = cur; o.textContent = cur + '（当前配置）';
+    sel.appendChild(o);
+  }
+  sel.value = cur;
+
+  const m = MODELS.find(x => x.id === cur);
+  $('modelHint').textContent = m
+    ? (m.kind === 'rig'
+        ? `${m.name} · ${m.desc || ''} —— 点「打开预览」可试动作和表情`
+        : `已选中：${m.name} · ${m.size_kb}KB · ${m.motions} 个动作 / ${m.expressions} 个表情`
+          + (m.missing ? ` · ⚠ ${m.missing} 个引用缺失，可能加载不完整` : ''))
+    : '从列表里选择一个模型，或用下面的上传框导入新的';
+
+  renderModelList();
+}
+
+function renderModelList(){
+  const box = $('modelList');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!MODELS.length) return;
+  MODELS.forEach(m => {
+    // 程序化形象没有 moc3 文件：不给删除入口，只给预览
+    if (m.kind === 'rig'){
+      const row = document.createElement('div');
+      row.className = 'model-row';
+      const active = (CFG?.stage?.model || '') === m.id;
+      row.innerHTML = `
+        <span class="nm">${active ? '● ' : ''}${escapeHtml(m.name)}</span>
+        <span class="meta">内置 · 免模型文件</span>
+        <span class="ok">可用</span>
+        <a class="rm" style="color:#39d0ff" href="${escapeHtml(m.preview || '/whale-lab')}" target="_blank">预览</a>`;
+      box.appendChild(row);
+      return;
+    }
+    const row = document.createElement('div');
+    row.className = 'model-row';
+    const active = (CFG?.stage?.model || '') === m.id;
+    row.innerHTML = `
+      <span class="nm">${active ? '● ' : ''}${escapeHtml(m.name)}</span>
+      <span class="meta">${m.motions}动作 · ${m.expressions}表情 · ${m.size_kb}KB</span>
+      <span class="${m.missing ? 'bad' : 'ok'}">${m.missing ? m.missing + '处缺失' : '完整'}</span>
+      ${MODELS.length > 1 ? '<span class="rm" title="删除">删除</span>' : ''}`;
+    const rm = row.querySelector('.rm');
+    if (rm) rm.onclick = async () => {
+      if (!confirm(`确定删除模型「${m.name}」？文件会从硬盘删掉。`)) return;
+      const rr = await fetch('/api/models', {
+        method: 'DELETE', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({id: m.id}),
+      });
+      const jj = await rr.json();
+      if (jj.ok){ toast('已删除 ' + m.name); await loadModels(); }
+      else toast('删除失败：' + (jj.error || ''));
+    };
+    box.appendChild(row);
+  });
+}
+
+function syncStageLabels(){
+  const s = Number($('stage-scale').value);
+  $('v-scale').textContent = Math.round(s * 100) + '%';
+  $('v-opacity').textContent = Math.round(Number($('stage-opacity').value) * 100) + '%';
+  const ox = Number($('stage-offset_x').value);
+  $('v-offx').textContent = Math.abs(ox) < 0.01 ? '居中' : (ox < 0 ? '左 ' + Math.round(-ox*100) + '%' : '右 ' + Math.round(ox*100) + '%');
+  const oy = Number($('stage-offset_y').value);
+  $('v-offy').textContent = Math.abs(oy) < 0.01 ? '贴底' : (oy < 0 ? '上移 ' + Math.round(-oy*100) + '%' : '下移 ' + Math.round(oy*100) + '%');
+  $('v-ballspeed').textContent = Number($('stage-ball_speed').value).toFixed(1) + '×';
+  $('v-ballsize').textContent = Math.round(Number($('stage-ball_size').value) * 100) + '%';
+  const bm = Number($('stage-ball_max').value);
+  $('v-ballmax').textContent = bm === 0 ? '不显示' : bm + ' 个';
+  $('v-rankmax').textContent = $('stage-rank_max').value + ' 名';
+}
+
+['stage-scale','stage-opacity','stage-offset_x','stage-offset_y',
+ 'stage-ball_speed','stage-ball_size','stage-ball_max','stage-rank_max'].forEach(id => {
+  $(id).addEventListener('input', syncStageLabels);
+});
+
+/* 上传 */
+const dz = $('dropzone');
+$('modelFile').addEventListener('change', (e) => {
+  if (e.target.files && e.target.files[0]) uploadModel(e.target.files[0]);
+});
+dz.addEventListener('click', () => $('modelFile').click());
+['dragenter','dragover'].forEach(t => dz.addEventListener(t, (e) => {
+  e.preventDefault(); dz.classList.add('drag');
+}));
+['dragleave','drop'].forEach(t => dz.addEventListener(t, (e) => {
+  e.preventDefault(); dz.classList.remove('drag');
+}));
+dz.addEventListener('drop', (e) => {
+  const f = e.dataTransfer?.files?.[0];
+  if (f) uploadModel(f);
+});
+
+async function uploadModel(file){
+  if (!file.name.toLowerCase().endsWith('.zip')){
+    setStatus('status-upload', '❌ 请上传 .zip 压缩包', 'err');
+    return;
+  }
+  setStatus('status-upload', `正在上传 ${file.name}（${(file.size/1024/1024).toFixed(1)}MB）…`, 'info');
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('name', file.name.replace(/\.zip$/i, ''));
+  try{
+    const r = await fetch('/api/models/upload', {method:'POST', body: fd});
+    const j = await r.json();
+    if (!j.ok){
+      setStatus('status-upload', '❌ ' + (j.error || '导入失败'), 'err');
+      return;
+    }
+    let msg = `✅ 导入成功：${j.name}，共 ${j.files} 个文件，${j.motions} 个动作 / ${j.expressions} 个表情`;
+    if (j.fixed && j.fixed.length) msg += `\n已自动修复 ${j.fixed.length} 处：` + j.fixed.slice(0, 4).join('；');
+    if (j.still_missing && j.still_missing.length) msg += `\n⚠ 仍有缺失：` + j.still_missing.slice(0, 4).join('、');
+    setStatus('status-upload', msg, j.still_missing?.length ? 'info' : 'ok');
+
+    await loadModels();
+    $('stage-model').value = j.id;
+    toast('模型已导入，点「保存并生效」即可用');
+  }catch(e){
+    setStatus('status-upload', '❌ 上传失败：' + e.message, 'err');
+  }
+}
+
+$('btnPreviewStage').onclick = () => window.open('/stage', '_blank');
+$('btnResetStage').onclick = () => {
+  $('stage-scale').value = 1;
+  $('stage-opacity').value = 1;
+  $('stage-offset_x').value = 0;
+  $('stage-offset_y').value = 0;
+  $('stage-flip').checked = false;
+  $('stage-auto_layout').checked = true;
+  syncStageLabels();
+  toast('已重置，记得点保存');
+};
+
+/* ---------------- 互动规则 ---------------- */
+const ON_LABEL = { gift:'收到礼物', chat:'评论命中关键词', follow:'新关注', enter:'进场', like:'点赞', any:'任意动作' };
+const MOTIONS = [['','不动作'],['happy','开心（挥手/笑）'],['shake','惊讶晃动'],['talk','说话']];
+const EFFECTS = [['','无特效'],['confetti','彩带'],['hearts','爱心'],['sparkle','闪光'],['flash','全屏亮闪']];
+
+function renderRules(){
+  const wrap = $('rulesWrap');
+  wrap.innerHTML = '';
+  if (!rules.length){
+    wrap.innerHTML = '<div style="font-size:12.5px;color:#6b8ba3;padding:8px 0">还没有规则，点下面的按钮加一条</div>';
+    return;
+  }
+  rules.forEach((r, i) => wrap.appendChild(ruleCard(r, i)));
+}
+
+function ruleCard(r, i){
+  const card = document.createElement('div');
+  card.className = 'rule-card';
+
+  const head = document.createElement('div');
+  head.className = 'rule-head';
+  const idx = document.createElement('span');
+  idx.className = 'idx'; idx.textContent = i + 1;
+  const onSel = document.createElement('select');
+  Object.entries(ON_LABEL).forEach(([v, t]) => {
+    const o = document.createElement('option'); o.value = v; o.textContent = t; onSel.appendChild(o);
+  });
+  onSel.value = r.on || 'chat';
+  onSel.onchange = () => { r.on = onSel.value; renderRules(); };
+  const spacer = document.createElement('div'); spacer.className = 'spacer';
+  const rm = document.createElement('span'); rm.className = 'rm'; rm.textContent = '×';
+  rm.onclick = () => { rules.splice(i, 1); renderRules(); };
+  head.append(idx, onSel, spacer, rm);
+  card.appendChild(head);
+
+  const grid = document.createElement('div');
+  grid.className = 'rule-grid';
+
+  if (r.on === 'gift'){
+    grid.appendChild(field('最低礼物价值', numberInput(r, 'min_value', 0, 999999, 10),
+      '按音浪/钻算，达到这个值才触发。可以是 0'));
+  } else {
+    grid.appendChild(field('关键词（逗号分隔，留空=全部）', textInput(r, 'match', '好看,漂亮,可爱'),
+      '命中文中任意一个词就触发'));
+  }
+
+  grid.appendChild(field('动作', selectInput(r, 'motion', MOTIONS)));
+  grid.appendChild(field('表情', selectInput(r, 'expression',
+    [['','不换表情'],['auto','随机'],['0','f00'],['1','f01'],['2','f02'],['3','f03']])));
+  grid.appendChild(field('视觉特效', selectInput(r, 'effect', EFFECTS)));
+  grid.appendChild(field('冷却（秒）', numberInput(r, 'cooldown', 0, 600, 1),
+    '这段时间内同一规则不重复触发'));
+
+  const replyWrap = field('台词（留空=只做画面反馈，不占说话机会）',
+    textArea(r, 'reply', '谢谢{name}的{gift}'), '占位符：{name} 观众名、{gift} 礼物名、{count} 数量');
+  replyWrap.style.gridColumn = '1 / -1';
+  grid.appendChild(replyWrap);
+
+  card.appendChild(grid);
+  return card;
+}
+
+function field(labelText, inputEl, hint){
+  const d = document.createElement('div');
+  d.className = 'field';
+  const l = document.createElement('label');
+  l.textContent = labelText;
+  d.appendChild(l); d.appendChild(inputEl);
+  if (hint){
+    const h = document.createElement('div');
+    h.className = 'hint'; h.textContent = hint;
+    d.appendChild(h);
+  }
+  return d;
+}
+function textInput(obj, key, ph){
+  const el = document.createElement('input');
+  el.type = 'text'; el.value = obj[key] ?? ''; el.placeholder = ph || '';
+  el.oninput = () => { obj[key] = el.value; };
+  return el;
+}
+function numberInput(obj, key, min, max, step){
+  const el = document.createElement('input');
+  el.type = 'number'; el.min = min; el.max = max; el.step = step || 1;
+  el.value = obj[key] ?? 0;
+  el.oninput = () => { obj[key] = Number(el.value) || 0; };
+  return el;
+}
+function textArea(obj, key, ph){
+  const el = document.createElement('textarea');
+  el.value = obj[key] ?? ''; el.placeholder = ph || '';
+  el.oninput = () => { obj[key] = el.value; };
+  return el;
+}
+function selectInput(obj, key, options){
+  const el = document.createElement('select');
+  options.forEach(([v, t]) => {
+    const o = document.createElement('option'); o.value = v; o.textContent = t; el.appendChild(o);
+  });
+  el.value = obj[key] ?? '';
+  el.onchange = () => { obj[key] = el.value; };
+  return el;
+}
+
+$('btnAddRule').onclick = () => {
+  rules.push({
+    id: 'r' + Date.now().toString(36),
+    on: 'chat', match: '', min_value: 0,
+    motion: 'happy', expression: 'auto', effect: 'sparkle', reply: '', cooldown: 8,
+  });
+  renderRules();
+};
+
+
+/* ---------------- 话术库渲染 ---------------- */
+function renderLines(){
+  const wrap = $('linesWrap');
+  wrap.innerHTML = '';
+  for (const [key, title, ph] of LINE_SECTIONS){
+    const items = CFG.lines[key] || [];
+    const box = document.createElement('div');
+    box.style.marginBottom = '18px';
+    box.innerHTML = `<label style="display:block;font-size:12.5px;color:var(--sub);margin-bottom:7px">
+        ${title} <span style="color:#6b8ba3">（占位符：${ph}）</span></label>`;
+    const list = document.createElement('div');
+    items.forEach((txt, i) => list.appendChild(lineRow(key, i, txt)));
+    box.appendChild(list);
+    const add = document.createElement('button');
+    add.textContent = '+ 添加一条';
+    add.style.fontSize = '12px';
+    add.onclick = () => {
+      CFG.lines[key] = (CFG.lines[key]||[]).concat(['']);
+      renderLines();
+    };
+    box.appendChild(add);
+    wrap.appendChild(box);
+  }
+}
+function lineRow(key, idx, txt){
+  const row = document.createElement('div');
+  row.className = 'list-item';
+  const ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.oninput = () => { CFG.lines[key][idx] = ta.value; };
+  const del = document.createElement('button');
+  del.className = 'del'; del.textContent = '×';
+  del.onclick = () => { CFG.lines[key].splice(idx,1); renderLines(); };
+  row.appendChild(ta); row.appendChild(del);
+  return row;
+}
+
+/* ---------------- 敏感词 ---------------- */
+function renderBanned(){
+  const box = $('bannedChips');
+  box.innerHTML = '';
+  banned.forEach((w, i) => {
+    const c = document.createElement('span');
+    c.className = 'chip';
+    c.innerHTML = `${escapeHtml(w)} <b>×</b>`;
+    c.querySelector('b').onclick = () => { banned.splice(i,1); renderBanned(); };
+    box.appendChild(c);
+  });
+  if (!banned.length) box.innerHTML = '<span style="font-size:12px;color:#6b8ba3">暂无屏蔽词</span>';
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------------- 保存 ---------------- */
+function collect(){
+  const num = id => { const v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
+  const bool = id => $(id).checked;
+
+  // 配置还没读回来就保存，会把所有字段写成空值（Key/规则全丢）。
+  // 这里直接拦住，宁可报错也不要静默覆盖用户配置。
+  if (!CFG) throw new Error('配置尚未加载完成，请稍候再保存');
+
+  // 密码框被浏览器/用户清空时，不要把已有 Key 覆盖成空字符串
+  const keyInput = $('llm-api_key').value.trim();
+  const keyKept = keyInput || (CFG?.llm?.api_key || '');
+
+  return {
+    persona: {
+      name: $('persona-name').value.trim(),
+      style: $('persona-style').value.trim(),
+      rules: $('persona-rules').value,
+    },
+    llm: {
+      base_url: $('llm-base_url').value.trim(),
+      api_key: keyKept,
+      model: $('llm-model').value.trim(),
+      temperature: num('llm-temperature'),
+      max_tokens: Math.round(num('llm-max_tokens')),
+    prompt_mode: $('llm-prompt_mode').value,
+      price_in: num('llm-price_in'),
+      price_out: num('llm-price_out'),
+    },
+    tts: {
+      engine: $('tts-engine').value,
+      voice: $('tts-voice').value,
+      rate: $('tts-rate').value.trim() || '+0%',
+      volume: $('tts-volume').value.trim() || '+0%',
+    },
+    ingest: {
+      enabled: bool('ingest-enabled'),
+      source: $('ingest-source').value,
+      douyin_room: $('ingest-douyin_room').value.trim(),
+      bridge_port: Math.round(num('ingest-bridge_port')),
+    },
+    music: {
+      enabled: bool('music-enabled'),
+      autoplay: bool('music-autoplay'),
+      gift_priority: bool('music-gift_priority'),
+      gift_min: Math.round(num('music-gift_min')),
+      ai_dj: bool('music-ai_dj'),
+      volume: num('music-volume'),
+      duck: num('music-duck'),
+      show_player: bool('music-show_player'),
+      cookie: $('music-cookie').value.trim(),
+      providers: $('music-providers').value.trim() || 'local,netease,qq',
+    },
+    pace: {
+      min_speak_gap: num('pace-min_speak_gap'),
+      idle_chat_seconds: num('pace-idle_chat_seconds'),
+      enter_merge_window: num('pace-enter_merge_window'),
+      max_reply_chars: Math.round(num('pace-max_reply_chars')),
+      announce_enter: bool('pace-announce_enter'),
+      announce_follow: bool('pace-announce_follow'),
+      announce_like: bool('pace-announce_like'),
+    },
+    filters: {
+      banned_words: banned,
+      max_input_chars: Math.round(num('filters-max_input_chars')),
+    },
+    scoring: {
+      gift: num('scoring-gift'),
+      follow: num('scoring-follow'),
+      chat: num('scoring-chat'),
+      enter: num('scoring-enter'),
+      like: num('scoring-like'),
+      question_bonus: num('scoring-question_bonus'),
+      mention_bonus: num('scoring-mention_bonus'),
+    },
+    lines: CFG.lines,
+    stage: {
+      model: $('stage-model').value,
+      scale: num('stage-scale'),
+      opacity: num('stage-opacity'),
+      offset_x: num('stage-offset_x'),
+      offset_y: num('stage-offset_y'),
+      flip: bool('stage-flip'),
+      auto_layout: bool('stage-auto_layout'),
+      show_danmu: bool('stage-show_danmu'),
+      show_subtitle: bool('stage-show_subtitle'),
+      show_datapods: bool('stage-show_datapods'),
+      show_ranking: bool('stage-show_ranking'),
+      show_ballpit: bool('stage-show_ballpit'),
+      show_badges: bool('stage-show_badges'),
+      ball_speed: num('stage-ball_speed'),
+      ball_size: num('stage-ball_size'),
+      ball_max: Math.round(num('stage-ball_max')),
+      ball_bounce: bool('stage-ball_bounce'),
+      rank_max: Math.round(num('stage-rank_max')),
+      rank_effect: bool('stage-rank_effect'),
+    },
+    fallback: {
+      offline_reply: bool('fb-offline_reply'),
+      offline_voice: bool('fb-offline_voice'),
+    },
+    templates: {
+      enabled: bool('tpl-enabled'),
+      gift: bool('tpl-gift'),
+      follow: bool('tpl-follow'),
+      welcome: bool('tpl-welcome'),
+      idle: bool('tpl-idle'),
+      prefer_llm: bool('tpl-prefer_llm'),
+    },
+    interact: {
+      enabled: bool('interact-enabled'),
+      rules: rules,
+    },
+  };
+}
+
+async function save(){
+  const btn = $('btnSave');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try{
+    const r = await fetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(collect()),
+    });
+    const j = await r.json();
+    if (j.ok){ CFG = j.config; toast('✅ 已保存并立即生效'); return j; }
+    else toast('❌ 保存失败：' + (j.error||'未知错误'));
+  }catch(e){
+    toast('❌ 网络错误：' + e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '保存并生效';
+  }
+  return null;
+}
+$('btnSave').onclick = save;
+
+/* ---------------- 测试按钮 ---------------- */
+$('btnTestLLM').onclick = async () => {
+  setStatus('status-llm', '正在请求模型…', 'info');
+  if (!await save()) { setStatus('status-llm', '请先修正配置并保存', 'err'); return; }
+  try{
+    const r = await fetch('/api/llm/test', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const j = await r.json();
+    if (j.ok) setStatus('status-llm', '✅ 连接成功，模型回复：' + j.reply, 'ok');
+    else if (j.offline) setStatus('status-llm', '⚠️ 未配置 LLM，当前用内置离线话术。返回：' + j.reply, 'info');
+    else setStatus('status-llm', '❌ 失败：' + (j.error||''), 'err');
+  }catch(e){ setStatus('status-llm', '❌ 请求异常：' + e.message, 'err'); }
+};
+
+$('btnPreviewTTS').onclick = async () => {
+  setStatus('status-tts', '正在合成…', 'info');
+  if (!await save()) { setStatus('status-tts', '请先修正配置并保存', 'err'); return; }
+  try{
+    const r = await fetch('/api/tts/preview', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text: $('ttsPreviewText').value}),
+    });
+    const j = await r.json();
+    if (j.ok){
+      const a = $('ttsAudio');
+      a.src = 'data:' + j.mime + ';base64,' + j.audio;
+      await a.play();
+      const dur = isFinite(a.duration) && a.duration > 0
+        ? a.duration.toFixed(1)
+        : ((j.audio.length * 0.75) / 16000).toFixed(1);
+      setStatus('status-tts', `✅ 合成成功，正在播放（约 ${dur} 秒）`, 'ok');
+    } else setStatus('status-tts', '❌ ' + (j.error||'合成失败'), 'err');
+  }catch(e){ setStatus('status-tts', '❌ 请求异常：' + e.message, 'err'); }
+};
+
+/* ---------------- 音乐播放器 ---------------- */
+function syncMusicVolume(){
+  const v = parseFloat($('music-volume').value || '0.6');
+  $('val-music-volume').textContent = Math.round(v * 100) + '%';
+  const d = parseFloat($('music-duck').value || '0.35');
+  $('val-music-duck').textContent = Math.round(d * 100) + '%';
+}
+$('music-volume').oninput = syncMusicVolume;
+$('music-duck').oninput = syncMusicVolume;
+
+async function refreshMusicQueue(){
+  try{
+    const r = await fetch('/api/music');
+    const j = await r.json();
+    renderMusicQueue(j.music);
+  }catch(e){ /* 忽略 */ }
+}
+
+function renderMusicQueue(m){
+  const box = $('music-queue-view');
+  if (!box || !m) return;
+  const cur = m.current;
+  const rows = [];
+  rows.push(cur
+    ? `<div class="hint">正在播放：<b>《${cur.title}》</b>${cur.by ? ' - ' + cur.by : ''}${cur.requestedBy ? '（' + cur.requestedBy + '点）' : ''}</div>`
+    : '<div class="hint">当前没有在放歌</div>');
+  const q = m.queue || [];
+  if (q.length){
+    rows.push('<div class="hint" style="margin-top:6px">队列：</div>');
+    q.forEach((t, i) => {
+      const gift = t.giftValue > 0 ? ` 💰${t.giftValue}` : '';
+      rows.push(`<div class="hint" style="padding-left:10px">${i + 1}. 《${t.title}》${t.by ? ' - ' + t.by : ''}${t.requestedBy ? '（' + t.requestedBy + '）' : ''}${gift}</div>`);
+    });
+  } else {
+    rows.push('<div class="hint" style="margin-top:6px">队列是空的</div>');
+  }
+  box.innerHTML = rows.join('');
+}
+
+$('btnMusicTest').onclick = async () => {
+  const q = $('music-test-q').value.trim();
+  if (!q) return setStatus('status-music', '先填歌名', 'err');
+  setStatus('status-music', `正在解析《${q}》…（会自动尝试多个音源）`, 'info');
+  try{
+    const r = await fetch('/api/music/request', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({query:q, user:'后台测试'}),
+    });
+    const j = await r.json();
+    setStatus('status-music', j.ok ? '✅ ' + (j.msg||'已加入队列') : '❌ ' + (j.msg||'点歌失败'), j.ok?'ok':'err');
+    renderMusicQueue(j.music);
+  }catch(e){ setStatus('status-music', '❌ ' + e.message, 'err'); }
+};
+
+$('btnMusicNext').onclick = async () => {
+  try{
+    const r = await fetch('/api/music/next', {method:'POST'});
+    const j = await r.json();
+    renderMusicQueue(j.music);
+    setStatus('status-music', '✅ 已切歌', 'ok');
+  }catch(e){ setStatus('status-music', '❌ ' + e.message, 'err'); }
+};
+
+$('btnMusicStop').onclick = async () => {
+  try{
+    const r = await fetch('/api/music/stop', {method:'POST'});
+    const j = await r.json();
+    renderMusicQueue(j.music);
+    setStatus('status-music', '✅ 已停止', 'ok');
+  }catch(e){ setStatus('status-music', '❌ ' + e.message, 'err'); }
+};
+
+setTimeout(refreshMusicQueue, 800);
+
+/* ---------------- 接入层实时状态 ---------------- */
+async function refreshIngestStatus(){
+  const box = $('status-ingest-live');
+  if (!box) return;
+  try{
+    const r = await fetch('/api/ingest/status');
+    const j = await r.json();
+    const ing = j.ingest || {};
+    const d = ing.detail || {};
+    if (!d.mode){
+      box.className = 'status';
+      box.textContent = ing.name === 'off' ? '⏸ 弹幕接入已关闭' : `接入层：${ing.name}`;
+      return;
+    }
+    const icon = d.live ? '🟢' : '🟡';
+    box.className = 'status' + (d.live ? ' ok' : '');
+    box.textContent = `${icon} ${d.state}` +
+      (d.signer ? '' : '（签名组件不可用，已退回浏览器模式）');
+  }catch(e){ /* 忽略 */ }
+}
+setInterval(refreshIngestStatus, 5000);
+setTimeout(refreshIngestStatus, 600);
+
+async function refreshRendererStatus(){
+  const box = $('status-renderer');
+  if (!box) return;
+  try{
+    const r = await fetch('/api/renderer/status');
+    const j = await r.json();
+    if (j.running){
+      box.className = 'status ok';
+      box.textContent = `🟢 原生画面运行中 · ${j.fps || 0} FPS（pid ${j.pid}）`;
+    } else {
+      box.className = 'status';
+      box.textContent = '⏸ 原生画面窗口未运行';
+    }
+  }catch(e){ /* 忽略 */ }
+}
+setInterval(refreshRendererStatus, 5000);
+setTimeout(refreshRendererStatus, 900);
+
+$('btnRenderer').onclick = async () => {
+  setStatus('status-renderer', '正在打开 PySide6 原生工作台…', 'info');
+  try{
+    const r = await fetch('/api/renderer/start', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const j = await r.json();
+    setStatus('status-renderer',
+      j.ok ? '✅ ' + (j.already ? '画面窗口已经在运行' : '已打开，去看那个新窗口')
+           : '❌ ' + (j.error || '启动失败'),
+      j.ok ? 'ok' : 'err');
+  }catch(e){ setStatus('status-renderer', '❌ ' + e.message, 'err'); }
+};
+
+$('btnRendererStop').onclick = async () => {
+  setStatus('status-renderer', '正在关闭…', 'info');
+  try{
+    const r = await fetch('/api/renderer/stop', {method:'POST'});
+    const j = await r.json();
+    setStatus('status-renderer',
+      j.ok ? '✅ 已关闭原生窗口' : '❌ ' + (j.error || '关闭失败'), j.ok ? 'ok' : 'err');
+  }catch(e){ setStatus('status-renderer', '❌ ' + e.message, 'err'); }
+};
+
+$('btnRestartIngest').onclick = async () => {
+  const saved = await save();
+  if (!saved || saved.ingest) return;
+  setStatus('status-ingest', '正在重连接入层…（若为抖音模式，会打开/复用浏览器窗口）', 'info');
+  try{
+    const r = await fetch('/api/restart-ingest', {method:'POST'});
+    const j = await r.json();
+    setStatus('status-ingest', j.ok ? '✅ 已重连：' + j.ingest : '❌ 重连失败', j.ok?'ok':'err');
+  }catch(e){ setStatus('status-ingest', '❌ ' + e.message, 'err'); }
+};
+
+$('btnKillBrowser').onclick = async () => {
+  setStatus('status-ingest', '正在清理采集浏览器…', 'info');
+  try{
+    const r = await fetch('/api/ingest/kill-browser', {method:'POST'});
+    const j = await r.json();
+    const msg = j.ok
+      ? `✅ 已清理 ${j.before} 个采集浏览器进程（不影响你日常用的浏览器）`
+      : '❌ 清理失败';
+    setStatus('status-ingest', msg, j.ok ? 'ok' : 'err');
+  }catch(e){ setStatus('status-ingest', '❌ ' + e.message, 'err'); }
+};
+
+$('btnAddBanned').onclick = () => {
+  const v = $('bannedInput').value.trim();
+  if (!v) return;
+  if (!banned.includes(v)) banned.push(v);
+  $('bannedInput').value = '';
+  renderBanned();
+};
+$('bannedInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); $('btnAddBanned').click(); }
+});
+
+$('btnReset').onclick = async () => {
+  if (!confirm('确定恢复默认配置？当前修改会丢失。')) return;
+  const r = await fetch('/api/config/reset', {method:'POST'});
+  const j = await r.json();
+  if (j.ok){ CFG = j.config; await load(); toast('已恢复默认'); }
+};
+
+/* 导航高亮 */
+const secs = [...document.querySelectorAll('main section')];
+const links = [...document.querySelectorAll('nav a')];
+const io = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (e.isIntersecting){
+      links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#'+e.target.id));
+    }
+  });
+}, {rootMargin:'-20% 0px -70% 0px'});
+secs.forEach(s => io.observe(s));
+
+/* Ctrl+S 保存 */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey||e.metaKey) && e.key === 's'){ e.preventDefault(); save(); }
+});
+
+load();
+</script>
+</body>
+</html>

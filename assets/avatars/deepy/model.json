@@ -1,0 +1,379 @@
+{
+  "schema_version": 1,
+  "id": "deepy-layered-v1",
+  "canvas": [
+    983,
+    1407
+  ],
+  "bones": [
+    {
+      "name": "root",
+      "parent": null,
+      "position": [
+        492,
+        885
+      ]
+    },
+    {
+      "name": "torso",
+      "parent": "root",
+      "position": [
+        0,
+        -70
+      ]
+    },
+    {
+      "name": "head",
+      "parent": "torso",
+      "position": [
+        0,
+        -205
+      ]
+    },
+    {
+      "name": "hair_left",
+      "parent": "head",
+      "position": [
+        -270,
+        -45
+      ]
+    },
+    {
+      "name": "hair_right",
+      "parent": "head",
+      "position": [
+        270,
+        -45
+      ]
+    },
+    {
+      "name": "upper_left",
+      "parent": "torso",
+      "position": [
+        -165,
+        -115
+      ]
+    },
+    {
+      "name": "forearm_left",
+      "parent": "upper_left",
+      "position": [
+        -42,
+        105
+      ]
+    },
+    {
+      "name": "hand_left",
+      "parent": "forearm_left",
+      "position": [
+        -35,
+        113
+      ]
+    },
+    {
+      "name": "upper_right",
+      "parent": "torso",
+      "position": [
+        165,
+        -115
+      ]
+    },
+    {
+      "name": "forearm_right",
+      "parent": "upper_right",
+      "position": [
+        42,
+        105
+      ]
+    },
+    {
+      "name": "hand_right",
+      "parent": "forearm_right",
+      "position": [
+        35,
+        113
+      ]
+    },
+    {
+      "name": "tail",
+      "parent": "root",
+      "position": [
+        0,
+        170
+      ]
+    },
+    {
+      "name": "fin_left",
+      "parent": "tail",
+      "position": [
+        -25,
+        145
+      ]
+    },
+    {
+      "name": "fin_right",
+      "parent": "tail",
+      "position": [
+        25,
+        145
+      ]
+    }
+  ],
+  "slots": [
+    {
+      "name": "hair_left",
+      "bone": "hair_left",
+      "file": "base/hair_left.png",
+      "offset": [
+        -207,
+        -45
+      ],
+      "order": 0
+    },
+    {
+      "name": "hair_right",
+      "bone": "hair_right",
+      "file": "base/hair_right.png",
+      "offset": [
+        -129,
+        -45
+      ],
+      "order": 0
+    },
+    {
+      "name": "tail",
+      "bone": "tail",
+      "file": "base/tail.png",
+      "offset": [
+        -122,
+        5
+      ],
+      "order": 1
+    },
+    {
+      "name": "fin_left",
+      "bone": "fin_left",
+      "file": "base/fin_left.png",
+      "offset": [
+        -339,
+        -35
+      ],
+      "order": 2
+    },
+    {
+      "name": "fin_right",
+      "bone": "fin_right",
+      "file": "base/fin_right.png",
+      "offset": [
+        -26,
+        -35
+      ],
+      "order": 2
+    },
+    {
+      "name": "body",
+      "bone": "torso",
+      "file": "base/body.png",
+      "offset": [
+        -167,
+        -227
+      ],
+      "order": 3
+    },
+    {
+      "name": "arm_left",
+      "bone": "upper_left",
+      "file": "base/arm_left.png",
+      "offset": [
+        -59,
+        -30
+      ],
+      "order": 9
+    },
+    {
+      "name": "forearm_left",
+      "bone": "forearm_left",
+      "file": "base/forearm_left.png",
+      "offset": [
+        -47,
+        -21
+      ],
+      "order": 10
+    },
+    {
+      "name": "hand_left",
+      "bone": "hand_left",
+      "file": "base/hand_left.png",
+      "offset": [
+        -52,
+        -29
+      ],
+      "order": 12
+    },
+    {
+      "name": "arm_right",
+      "bone": "upper_right",
+      "file": "base/arm_right.png",
+      "offset": [
+        -34,
+        -30
+      ],
+      "order": 9
+    },
+    {
+      "name": "forearm_right",
+      "bone": "forearm_right",
+      "file": "base/forearm_right.png",
+      "offset": [
+        -38,
+        -21
+      ],
+      "order": 10
+    },
+    {
+      "name": "hand_right",
+      "bone": "hand_right",
+      "file": "base/hand_right.png",
+      "offset": [
+        -37,
+        -29
+      ],
+      "order": 12
+    },
+    {
+      "name": "head",
+      "bone": "head",
+      "file": "base/head.png",
+      "offset": [
+        -480,
+        -598
+      ],
+      "order": 15
+    }
+  ],
+  "skins": {
+    "sailor": {
+      "label": "蓝海水手服",
+      "slots": {
+        "clothes": {
+          "bone": "torso",
+          "file": "skins/sailor/clothes.png",
+          "offset": [
+            -149,
+            -168
+          ],
+          "order": 5
+        },
+        "skirt": {
+          "bone": "root",
+          "file": "skins/sailor/skirt.png",
+          "offset": [
+            -211,
+            -45
+          ],
+          "order": 6
+        },
+        "sleeve_left": {
+          "bone": "upper_left",
+          "file": "skins/sailor/sleeve_left.png",
+          "offset": [
+            -52,
+            -31
+          ],
+          "order": 11
+        },
+        "sleeve_right": {
+          "bone": "upper_right",
+          "file": "skins/sailor/sleeve_right.png",
+          "offset": [
+            -40,
+            -31
+          ],
+          "order": 11
+        }
+      }
+    },
+    "raincoat": {
+      "label": "柠檬雨衣",
+      "slots": {
+        "clothes": {
+          "bone": "torso",
+          "file": "skins/raincoat/clothes.png",
+          "offset": [
+            -146,
+            -170
+          ],
+          "order": 5
+        },
+        "skirt": {
+          "bone": "root",
+          "file": "skins/raincoat/skirt.png",
+          "offset": [
+            -212,
+            -37
+          ],
+          "order": 6
+        },
+        "sleeve_left": {
+          "bone": "upper_left",
+          "file": "skins/raincoat/sleeve_left.png",
+          "offset": [
+            -52,
+            -31
+          ],
+          "order": 11
+        },
+        "sleeve_right": {
+          "bone": "upper_right",
+          "file": "skins/raincoat/sleeve_right.png",
+          "offset": [
+            -40,
+            -31
+          ],
+          "order": 11
+        }
+      }
+    },
+    "starry": {
+      "label": "星空礼服",
+      "slots": {
+        "clothes": {
+          "bone": "torso",
+          "file": "skins/starry/clothes.png",
+          "offset": [
+            -146,
+            -162
+          ],
+          "order": 5
+        },
+        "skirt": {
+          "bone": "root",
+          "file": "skins/starry/skirt.png",
+          "offset": [
+            -251,
+            -41
+          ],
+          "order": 6
+        },
+        "sleeve_left": {
+          "bone": "upper_left",
+          "file": "skins/starry/sleeve_left.png",
+          "offset": [
+            -52,
+            -31
+          ],
+          "order": 11
+        },
+        "sleeve_right": {
+          "bone": "upper_right",
+          "file": "skins/starry/sleeve_right.png",
+          "offset": [
+            -40,
+            -31
+          ],
+          "order": 11
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "eyes": {
+    "rect": [
+      0.28383,
+      0.258,
+      0.42828,
+      0.11514
+    ],
+    "file": "deepy.patch-eyes.png"
+  },
+  "mouth": {
+    "rect": [
+      0.44659,
+      0.371,
+      0.10783,
+      0.05473
+    ],
+    "file": "deepy.patch-mouth.png"
+  }
+}
