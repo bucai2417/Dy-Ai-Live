@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .fishing_board import FishingBoard
 from .like_goal import MAX_RECENT_LIKES
+from .metrics import MAX_RECENT_GIFTS
 
 
 log = logging.getLogger(__name__)
@@ -62,11 +63,15 @@ class LiveHistory:
             if not isinstance(event_ids, list) or any(not isinstance(value, str) or not value for value in event_ids):
                 raise ValueError("点赞消息记录格式错误")
             target = self._count(like_state.get("next_target", self.likes.step))
+            gift_ids = data.get("gift_event_ids", [])
+            if not isinstance(gift_ids, list) or any(not isinstance(value, str) or not value for value in gift_ids):
+                raise ValueError("礼物消息记录格式错误")
             fishing_board = FishingBoard.restore(data.get("fishing_board", {}))
             for key, value in counts.items():
                 setattr(self.metrics, key, value)
             self.metrics.estimated = bool(data["metrics"].get("estimated"))
             self.metrics.gift_board.records = records
+            self.metrics.gift_event_ids = dict.fromkeys(gift_ids[-MAX_RECENT_GIFTS:])
             self.metrics.fishing_board = fishing_board
             self.hub.stats.update(events)
             for key, value in restored_likes.items():
@@ -95,6 +100,7 @@ class LiveHistory:
         return self.metrics.day, copy.deepcopy({
             "metrics": {key: getattr(self.metrics, key) for key in (*COUNTERS, "estimated")},
             "gift_board": self.metrics.gift_board.records,
+            "gift_event_ids": list(self.metrics.gift_event_ids),
             "fishing_board": self.metrics.fishing_board.export(),
             "events": {key: self.hub.stats[key] for key in EVENT_COUNTERS},
             "likes": {**{key: getattr(self.likes, key) for key in ("total", "step", "next_target", "completed", "index", "source_totals")},

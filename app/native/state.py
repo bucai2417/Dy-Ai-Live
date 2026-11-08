@@ -145,7 +145,8 @@ class StageState:
                 self.subtitle_at = now
                 self.subtitle_until = now + max(8, len(self.subtitle) * .18)
             elif kind == "state":
-                if self.gift_show.get("active") and not self.paused and not self.gift_show.get("paused"):
+                if (self.gift_show.get("active") and not self.paused and not self.gift_show.get("paused")
+                        and not self.gift_show.get("holding")):
                     self.gift_show["elapsed"] = self.gift_show.get("elapsed", 0) + max(0, now - self.gift_show_at)
                 self.gift_show_at = now
                 if self.fishing.get("active") and not self.paused and not self.fishing.get("paused"):
@@ -274,6 +275,7 @@ class StageState:
             self.gift_senders[key] = {**row, "key": key, "at": now if changed else old.get("at", now)}
         urls = {sender.get("avatar") for sender in self.gift_senders.values()}
         urls.add(((self.gift_show.get("active") or {}).get("user") or {}).get("avatar"))
+        urls.add(((self.fishing.get("net") or {}).get("user") or {}).get("avatar"))
         self.avatar_images = {url: image for url, image in self.avatar_images.items() if url in urls}
         if (animate and previous and self.gift_senders and next(iter(previous)) != next(iter(self.gift_senders))
                 and stage.get("scene_reactions", False) and not self.paused
@@ -285,7 +287,8 @@ class StageState:
     def set_avatar(self, url, image):
         with self.lock:
             donor = ((self.gift_show.get("active") or {}).get("user") or {}).get("avatar")
-            if url == donor or any(sender.get("avatar") == url for sender in self.gift_senders.values()):
+            net_donor = ((self.fishing.get("net") or {}).get("user") or {}).get("avatar")
+            if url in (donor, net_donor) or any(sender.get("avatar") == url for sender in self.gift_senders.values()):
                 self.avatar_images[url] = image
 
     def set_video(self, image, pending=0):

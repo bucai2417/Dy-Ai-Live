@@ -562,7 +562,7 @@ class StudioWindow(QMainWindow):
 
     def show_preferences(self):
         from .preferences import Preferences
-        dialog = Preferences(self.client, self)
+        dialog = Preferences(self.client, self, audio=self.audio)
         dialog.exec()
         dialog.deleteLater()
 

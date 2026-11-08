@@ -15,6 +15,7 @@ from .state import StageState
 
 class AudioController(QObject):
     notice = Signal(str)
+    bgm_status_changed = Signal(str)
     music_ended = Signal(str)
     voice_finished = Signal(str, str)
 
@@ -60,6 +61,8 @@ class AudioController(QObject):
         self.bgm.errorOccurred.connect(self._bgm_error)
         self.bgm_path = ""
         self.bgm_failed = False
+        self.bgm_error_text = ""
+        self._bgm_status = ""
         self.watchdog = QTimer(self)
         self.watchdog.timeout.connect(self._tick)
         self.watchdog.start(100)
@@ -106,7 +109,8 @@ class AudioController(QObject):
 
     def configure_bgm(self):
         cfg = self.state.config.get("bgm") or {}
-        path = str(cfg.get("path") or "").strip()
+        path = str(cfg.get("path") or "").strip().strip('"')
+        self.bgm_error_text = ""
         if not cfg.get("enabled") or not path:
             self.bgm.stop()
             self.bgm.setSource(QUrl())
@@ -124,6 +128,7 @@ class AudioController(QObject):
         self.bgm_path = path
         self.bgm_failed = not source.is_file()
         if self.bgm_failed:
+            self.bgm_error_text = "文件不存在，请重新选择"
             self.notice.emit("背景 BGM 文件不存在，请在设置中重新选择：" + path)
             return
         self.bgm_output.setVolume(float(cfg.get("volume", .2)))
@@ -131,7 +136,7 @@ class AudioController(QObject):
 
     def apply_bgm(self):
         cfg = self.state.config.get("bgm") or {}
-        song_playing = self.pending_music.get("playing") and self.state.config.get("music", {}).get("enabled", True)
+        song_playing = cfg.get("enabled") and self._song_audible()
         should_play = (cfg.get("enabled") and self.bgm_path and not self.bgm_failed
                        and self.state.connected and not self.state.paused and not song_playing)
         if should_play:
@@ -139,9 +144,50 @@ class AudioController(QObject):
                 self.bgm.play()
         elif self.bgm.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
             self.bgm.pause()
+        status = self.bgm_status()
+        if status != self._bgm_status:
+            self._bgm_status = status
+            self.bgm_status_changed.emit(status)
+
+    def _song_audible(self):
+        return (bool(self.track_id) and self.track_id != self.ended_track
+                and self.pending_music.get("playing") and self.state.config.get("music", {}).get("enabled", True)
+                and self.music.playbackState() == QMediaPlayer.PlaybackState.PlayingState
+                and self.music.mediaStatus() not in (QMediaPlayer.MediaStatus.InvalidMedia, QMediaPlayer.MediaStatus.EndOfMedia))
+
+    def bgm_status(self):
+        cfg = self.state.config.get("bgm") or {}
+        if not cfg.get("enabled"):
+            return "BGM 未开启：请勾选循环播放并保存"
+        if not cfg.get("path"):
+            return "BGM 未选择音频文件"
+        if self.bgm_failed:
+            return "BGM 播放失败：" + (self.bgm_error_text or "请重新选择音频或重试")
+        if not self.state.connected:
+            return "BGM 等待直播服务连接"
+        if self.state.paused:
+            return "BGM 随直播暂停，恢复后续播"
+        if self._song_audible():
+            return "BGM 暂歇：观众点歌正在播放"
+        if self.muted:
+            return "BGM 已静音：工作台以静音模式运行"
+        if float(cfg.get("volume", .2)) <= 0:
+            return "BGM 音量为 0，请调高音量并保存"
+        if self.bgm_output.device().isNull():
+            return "BGM 没有可用音频设备，请连接扬声器或耳机后重试"
+        if self.bgm.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            suffix = " · 说话/视频期间降低音量" if self.voice_active or self.state.video_image is not None else ""
+            return "BGM 循环播放：" + Path(self.bgm_path).name + suffix
+        return "BGM 正在加载音频…"
+
+    def retry_bgm(self):
+        self.bgm_failed = True
+        self.configure_bgm()
+        self.apply_bgm()
 
     def _bgm_error(self, error, message):
         self.bgm_failed = True
+        self.bgm_error_text = message
         self.notice.emit("背景 BGM 无法播放，请重新选择音频文件：" + message)
 
     def _next_voice(self):

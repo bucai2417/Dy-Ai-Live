@@ -61,6 +61,20 @@ def test_restart_restores_all_daily_counts_full_ranking_and_threshold(tmp_path):
     assert second.metrics.ranking()[0]["name"] == "中文观众0"
 
 
+def test_gift_retransmission_after_restart_does_not_inflate_tribute(tmp_path):
+    first = history(tmp_path / "礼物记忆.sqlite3")
+    gift = Event(kind="gift", id="gift-unique", user_id="supporter", user_name="星光鱼友", gift_count=2, gift_value=10)
+    assert first.metrics.add_gift(gift)
+    first.write(*first.capture())
+    second = history(first.path)
+    assert second.restore()
+    assert not second.metrics.add_gift(gift)
+    assert second.metrics.gift_board.tribute(gift.to_dict()) == {"first": True, "daily_count": 2}
+    gift.id = "gift-another"
+    assert second.metrics.add_gift(gift)
+    assert second.metrics.gift_board.tribute(gift.to_dict()) == {"first": False, "daily_count": 4}
+
+
 def test_rollover_keeps_history_and_starts_today_at_zero(tmp_path, monkeypatch):
     journal = history(tmp_path / "daily.sqlite3")
     fill(journal)

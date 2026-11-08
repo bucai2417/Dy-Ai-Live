@@ -5,6 +5,8 @@ import math
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QLinearGradient, QPainterPath, QPen, QPolygonF, QRadialGradient
 
+from .gift_spotlight import MESSAGES, donor_card
+
 
 COLORS = {"tea": ("#f5cc8a", "#a3e3d2"), "video": ("#a3edbb", "#f5cf8c"),
           "flowers": ("#ffafca", "#c7a3ef"), "lollipop": ("#ffa3cf", "#a6e6ff"),
@@ -15,7 +17,7 @@ COLORS = {"tea": ("#f5cc8a", "#a3e3d2"), "video": ("#a3edbb", "#f5cf8c"),
 
 def gift_view(state, now):
     show = state.get("gift_show") or {}
-    extra = 0 if state.get("paused") or show.get("paused") else max(0, now - state.get("gift_show_at", now))
+    extra = 0 if state.get("paused") or show.get("paused") or show.get("holding") else max(0, now - state.get("gift_show_at", now))
     return {**show, "elapsed": show.get("elapsed", 0) + extra}
 
 
@@ -52,7 +54,7 @@ class GiftRenderer:
         clip = QPainterPath()
         clip.addRoundedRect(QRectF(0, 0, 960, height), 28, 28)
         painter.setClipPath(clip)
-        painter.fillRect(QRectF(0, 0, 960, height), QColor(6, 15, 34, 205))
+        painter.fillRect(QRectF(0, 0, 960, height), QColor(6, 15, 34, 170))
         fade = min(1, age / .6, max(0, (show["duration"] - age) / .65))
         painter.setOpacity(fade)
         glow = QRadialGradient(330, height * .48, min(450, height * .8))
@@ -104,40 +106,22 @@ class GiftRenderer:
             video_height = video_width * video.height() / video.width()
             painter.fillRect(QRectF(80, 105, 440, height - 150), QColor(9, 23, 39, 235))
             painter.drawImage(QRectF(324 - video_width / 2, height - 65 - video_height, video_width, video_height), video)
-        card_top = max(118, height * (.23 if scene.portrait else .41))
-        self._donor(painter, scene, state, show, (548, card_top, 368, 145), primary)
-        phase = "接住你的心意" if age < 2 else "专属表演中" if age < show["duration"] - 2 else "谢谢你的陪伴"
-        scene.text(painter, (550, card_top + 160, 366, 28), phase, 20, secondary, True)
-        if view.get("pending"):
-            scene.text(painter, (550, card_top + 197, 366, 24), f"还有 {view['pending']} 份心意，依次完整呈现", 15, "#aac1d7")
+        card_top = max(112, min(height - 264, height * (.23 if scene.portrait else .30)))
+        donor_card(painter, scene, state, show["user"], (548, card_top, 368, 178), primary, age,
+                   f"{show['gift']}  × {show['count']}", show.get("tribute"))
+        phase = "这一刻，你是主角" if age < 2 else MESSAGES.get(effect, MESSAGES["sparkles"])
+        scene.elided(painter, (550, card_top + 186, 366, 28), phase, 18, secondary, True)
+        if age >= show["duration"] - 2.5:
+            scene.elided(painter, (550, card_top + 217, 366, 24), "心意收到啦 · 期待和你继续玩", 16, "#e6f4ff")
+        elif view.get("pending"):
+            scene.elided(painter, (550, card_top + 217, 366, 24), f"还有 {view['pending']} 份心意，依次呈现", 15, "#aac1d7")
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(255, 255, 255, 30))
-        painter.drawRoundedRect(QRectF(550, card_top + 235, 356, 4), 2, 2)
+        painter.drawRoundedRect(QRectF(550, card_top + 250, 356, 4), 2, 2)
         painter.setBrush(QColor(primary))
-        painter.drawRoundedRect(QRectF(550, card_top + 235, 356 * min(1, age / show["duration"]), 4), 2, 2)
+        painter.drawRoundedRect(QRectF(550, card_top + 250, 356 * min(1, age / show["duration"]), 4), 2, 2)
         painter.restore()
 
-    def _donor(self, painter, scene, state, show, bounds, color):
-        left, top, width, height = bounds
-        scene.panel(painter, bounds, 24)
-        painter.setPen(QPen(QColor(color), 2))
-        painter.setBrush(QColor("#27394f"))
-        center = QPointF(left + 57, top + 62)
-        painter.drawEllipse(center, 39, 39)
-        image = state.get("avatar_images", {}).get(show["user"].get("avatar", ""))
-        if image is not None and not image.isNull():
-            painter.save()
-            clip = QPainterPath()
-            clip.addEllipse(center, 35, 35)
-            painter.setClipPath(clip, Qt.ClipOperation.IntersectClip)
-            painter.drawImage(QRectF(center.x() - 35, center.y() - 35, 70, 70), image)
-            painter.restore()
-        else:
-            scene.text(painter, (left + 21, top + 26, 72, 72), (show["user"].get("name") or "观众")[:1], 28, color,
-                       True, Qt.AlignmentFlag.AlignCenter)
-        scene.text(painter, (left + 111, top + 20, width - 125, 24), "感谢你的礼物", 16, "#a7c0d7")
-        scene.elided(painter, (left + 111, top + 47, width - 125, 35), show["user"]["name"], 27, color, True)
-        scene.elided(painter, (left + 22, top + 104, width - 44, 28), f"{show['gift']}  × {show['count']}", 21, "#f2f5ff", True)
 
     def _prop(self, painter, effect, age):
         if effect in ("tea", "video"):

@@ -309,6 +309,8 @@ class Brain(LiveInteractions, Autonomy):
             await self._respond(ev)
 
     async def _publish_event(self, ev: Event) -> bool:
+        if ev.kind == "gift" and not metrics.add_gift(ev):
+            return True
         self.last_activity_at = time.time()
         await hub.broadcast({"type": "event", "event": ev.to_dict()})
         if ev.kind in ("chat", "gift", "follow") and (ev.kind != "chat" or ev.text.strip()):
@@ -337,10 +339,10 @@ class Brain(LiveInteractions, Autonomy):
 
         # 统计先记：礼物榜/token 消耗要包含被过滤掉的事件，否则数据会少
         if ev.kind == "gift":
-            metrics.add_gift(ev)
             net_gift = False
             if not self.paused and Effective.interact()["enabled"]:
-                donor = {"id": ev.user_id, "name": ev.user_name}
+                donor = {"id": ev.user_id, "name": ev.user_name, "avatar": ev.avatar,
+                         "tribute": metrics.gift_board.tribute(ev.to_dict())}
                 net_value = 0 if ev.gift_value_estimated else ev.gift_value
                 net_gift = self.fishing.add_net_gift(ev.gift_count or 1, net_value, donor, ev.id, ev.gift_name)
                 if net_gift or self.fishing.add_gift(ev.gift_count or 1, donor, ev.id):
@@ -355,7 +357,7 @@ class Brain(LiveInteractions, Autonomy):
                     log.exception("墨镜装扮保存失败，本次仍显示配饰")
                     await hub.broadcast({"type": "costume", "name": "cool", "event_id": ev.id}, remember=False)
             if not net_gift and self.queue_gift_show(ev):
-                if self.gift_show.tick():
+                if self.tick_gift_show():
                     await self.sync_gift_show()
                 else:
                     await self._push_gift_show()
@@ -394,7 +396,7 @@ class Brain(LiveInteractions, Autonomy):
     async def _like_loop(self):
         while True:
             await asyncio.sleep(0.25)
-            if self.gift_show.tick():
+            if self.tick_gift_show():
                 await self.sync_gift_show()
             await self.ensure_dedicated_fishing()
             if (self.dedicated_fishing and self.fishing.phase in ("waiting", "hooked")

@@ -385,10 +385,13 @@ def test_bgm_loops_pauses_ducks_and_resumes_without_touching_song_queue(qt, tmp_
         assert controller.bgm.loops() == QMediaPlayer.Loops.Infinite.value
         assert controller.bgm.playbackState() == QMediaPlayer.PlaybackState.PlayingState
         assert controller.bgm.source().toLocalFile() == str(path).replace("\\", "/")
-        controller.pending_music = {"playing": True}
+        controller.music.setLoops(QMediaPlayer.Loops.Infinite)
+        controller.handle({"type": "music", "music": {"playing": True,
+                           "current": {"id": "song", "url": path.as_uri()}}})
+        pump(qt, .1)
         controller.apply_bgm()
         assert controller.bgm.playbackState() == QMediaPlayer.PlaybackState.PausedState
-        controller.pending_music = {}
+        controller.handle({"type": "music", "music": {}})
         controller.apply_bgm()
         state.video_image = QImage(1, 1, QImage.Format.Format_ARGB32)
         for _ in range(25):

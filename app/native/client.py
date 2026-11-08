@@ -82,7 +82,7 @@ class LiveClient(QObject):
         if not isinstance(message, dict):
             return
         self.state.apply(message)
-        if message.get("type") in ("event", "config_changed", "hello", "reset", "stats", "gift_ranking", "gift_show"):
+        if message.get("type") in ("event", "config_changed", "hello", "reset", "stats", "gift_ranking", "gift_show", "fishing"):
             self.avatars.refresh()
         self.message.emit(message)
 

@@ -249,6 +249,11 @@ DEFAULTS: dict[str, Any] = {
         "speech_during_music": False,
         "movement_enabled": True,
         "movement_seconds": 90,
+        "scene_interactions": True,
+        "interaction_seconds": 18,
+        "scene_switching": True,
+        "scene_switch_seconds": 300,
+        "movement_voice": True,
     },
     # 互动：让观众的动作真的能改变画面，而不是只有嘴在动
     "interact": {
@@ -419,6 +424,8 @@ def _validate_config(data: dict, defaults: dict = DEFAULTS, path: str = "") -> N
         ("fishing", "failed_limit", 1, 20),
         ("fishing", "auto_invite_seconds", 30, 900),
         ("idle", "movement_seconds", 30, 3600),
+        ("idle", "interaction_seconds", 8, 60),
+        ("idle", "scene_switch_seconds", 120, 3600),
         ("stage", "subtitle_size", 14, 26),
     ):
         value = data.get(section, {}).get(key)

@@ -22,6 +22,8 @@ DEFAULT_PRICING = {
     "output_per_m": 8.0,   # 输出（completion）
 }
 
+MAX_RECENT_GIFTS = 4096
+
 
 def _today() -> str:
     return dt.date.today().isoformat()
@@ -40,6 +42,7 @@ class Metrics:
         self.gift_value = 0
         # 送礼榜：name -> {name, avatar, value, count, ts}
         self.gift_board = GiftBoard()
+        self.gift_event_ids = {}
         self.fishing_board = FishingBoard()
         self.started_at = time.time()
         self.storage = {}
@@ -59,6 +62,7 @@ class Metrics:
             self.gifts = 0
             self.gift_value = 0
             self.gift_board.clear()
+            self.gift_event_ids.clear()
             self.fishing_board.clear()
             self.estimated = False
 
@@ -91,14 +95,22 @@ class Metrics:
         self._roll()
         self.replies += 1
 
-    def add_gift(self, ev) -> None:
+    def add_gift(self, ev) -> bool:
         """记录一笔礼物：累加到该用户名下。"""
         self._roll()
+        identifier = str(getattr(ev, "id", "") or "")
+        if identifier and identifier in self.gift_event_ids:
+            return False
+        if identifier:
+            self.gift_event_ids[identifier] = None
+            while len(self.gift_event_ids) > MAX_RECENT_GIFTS:
+                self.gift_event_ids.pop(next(iter(self.gift_event_ids)))
         value = int(getattr(ev, "gift_value", 0) or 0)
         self.gifts += 1
         self.gift_value += value
 
         self.gift_board.add(ev.to_dict())
+        return True
 
     def add_catch(self, round_id, fish, winner):
         self._roll()

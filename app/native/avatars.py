@@ -31,6 +31,9 @@ class AvatarLoader(QObject):
             avatar = ((self.state.gift_show.get("active") or {}).get("user") or {}).get("avatar")
             if avatar and avatar not in urls:
                 urls.insert(0, avatar)
+            avatar = ((self.state.fishing.get("net") or {}).get("user") or {}).get("avatar")
+            if avatar and avatar not in urls:
+                urls.insert(0, avatar)
         self.pending = []
         for url in urls:
             parsed = QUrl(url)

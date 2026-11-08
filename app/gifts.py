@@ -34,5 +34,12 @@ class GiftBoard:
     def snapshot(self):
         return {"value": self.ranking(by="value"), "count": self.ranking(by="count")}
 
+    def tribute(self, event):
+        identifier = str(event.get("userId") or "")
+        name = str(event.get("userName") or "观众").strip()[:80] or "观众"
+        key = "id:" + identifier if identifier else "name:" + name
+        count = self.records.get(key, {}).get("count", 0)
+        return {"first": count == max(1, int(event.get("giftCount") or 1)), "daily_count": count}
+
     def clear(self):
         self.records.clear()

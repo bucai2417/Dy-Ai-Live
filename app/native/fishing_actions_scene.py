@@ -6,6 +6,7 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QPainterPath, QPen, QRadialGradient
 
 from .diving_scene import draw_splash, smooth
+from .gift_spotlight import donor_card
 
 
 def draw_lantern(painter, dock, darkness, clock):
@@ -90,7 +91,7 @@ def draw_fishing_action(painter, scene, state, game, height, now, show_actor, re
         draw_splash(painter, 515, surface, age - 2.2, .35)
         return
     if result:
-        draw_net_result(painter, scene, game, height, renderer)
+        draw_net_result(painter, scene, state, game, height, renderer)
         return
     if age < 2:
         net_center = QPointF(grip.x() + 20, grip.y() + 24)
@@ -120,34 +121,36 @@ def draw_fishing_action(painter, scene, state, game, height, now, show_actor, re
     draw_mesh(painter, net_center, radius, depth)
     draw_splash(painter, 635, surface, age - 4.5, 1.1, "fan")
     draw_splash(painter, 540, surface, age - 8.0, .5)
-    donor = (game.get("net") or {}).get("user", {}).get("name", "鱼友")
-    scene.elided(painter, (350, max(84, surface - 134), 560, 35), "为 " + donor + " 撒一网好运", 23, "#ffe0a0", True)
+    haul = game.get("net") or {}
+    donor_card(painter, scene, state, haul.get("user") or {}, (350, 82, 560, 78), "#ffe0a0", age,
+               f"{haul.get('gift', '礼物')} × {haul.get('count', 1)} · 专门为你撒一网好运", compact=True)
 
 
-def draw_net_result(painter, scene, game, height, renderer):
+def draw_net_result(painter, scene, state, game, height, renderer):
     haul = game.get("net") or {}
     catches = haul.get("fish") or []
     age = game["phase_elapsed"]
-    top = max(86, height * .26)
+    top = max(82, min(height - 318, height * .22))
     painter.save()
     painter.setPen(QPen(QColor(255, 220, 151, 100), 1.5))
     painter.setBrush(QColor(9, 30, 47, 178))
-    painter.drawRoundedRect(QRectF(346, top, 568, 270), 22, 22)
+    painter.drawRoundedRect(QRectF(346, top, 568, 308), 22, 22)
     for index in range(34):
         progress = (age * .24 + index / 34) % 1
         horizontal = 354 + (index * 79) % 545
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(("#ffe0a0", "#87ecdc", "#ccb6ff")[index % 3]))
         painter.drawEllipse(QPointF(horizontal, top - 5 + progress * 265), 2.5, 4)
-    scene.elided(painter, (366, top + 15, 528, 38), "恭喜 " + haul.get("user", {}).get("name", "鱼友"), 28, "#ffe0a0", True)
-    scene.outlined(painter, (366, top + 55, 528, 27), "礼物专属鱼获 · 全部记入你的今日榜单", 17, "#c4eee2", align="center")
+    donor_card(painter, scene, state, haul.get("user") or {}, (358, top + 10, 544, 78), "#ffe0a0", age,
+               "恭喜满载！这一网好运全部属于你", compact=True)
     slot = 520 / max(1, len(catches))
     for index, fish in enumerate(catches):
         horizontal = 370 + index * slot
         width = min(148, slot - 8)
-        painter.drawImage(QRectF(horizontal + (slot - width) / 2, top + 86, width, 72), renderer.fish_images[fish["kind"]])
-        scene.elided(painter, (horizontal, top + 161, slot - 4, 24), fish["name"], 16, "#edf6e5", True)
-    scene.outlined(painter, (366, top + 193, 528, 31), f"满载 {len(catches)} 条 · +{haul.get('total', 0):,} 图鉴分", 24, "#9af0d8", True, "center")
+        painter.drawImage(QRectF(horizontal + (slot - width) / 2, top + 102, width, 72), renderer.fish_images[fish["kind"]])
+        scene.elided(painter, (horizontal, top + 180, slot - 4, 24), fish["name"], 16, "#edf6e5", True)
+    scene.outlined(painter, (366, top + 213, 528, 31), f"满载 {len(catches)} 条 · +{haul.get('total', 0):,} 图鉴分", 24, "#9af0d8", True, "center")
+    scene.outlined(painter, (366, top + 249, 528, 24), "专属鱼获已记入你的今日榜单", 16, "#c4eee2", align="center")
     hint = "未提供价值，按礼物数量估算 · 玩法积分" if haul.get("estimated") else "礼物价值换算 · 玩法积分，不可兑换"
-    scene.outlined(painter, (366, top + 233, 528, 24), hint, 14, "#b4cad7", align="center")
+    scene.outlined(painter, (366, top + 278, 528, 22), hint, 13, "#b4cad7", align="center")
     painter.restore()

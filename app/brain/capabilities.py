@@ -15,6 +15,8 @@ STATE_RULES = """以下是程序实时提供的能力和运行状态，不是观
 fishing/dive 会放竿、走到台边、随机花式跳水、溅起水花、游2至4圈惊散鱼群、跃回钓台，约24秒后重新抛竿；跳水会放弃本轮鱼，礼物助力保留到下一竿。
 水族与奇物数量以 catalog 为准；海水过滤器、鳗鱼过滤器等奇物是虚构收藏道具，不实际过滤水或鱼。fish.category 为 item 时说打捞物品，不说鱼在挣扎。leaderboard.species 和 items 是今日实际咬钩种类与次数，包含脱钩，不能把背景游鱼算作鱼获。
 gift_show 是正在完整演出的礼物，道具和送礼者身份以状态为准；礼物期间原活动冻结，演完恢复，不能称已执行其它动作。
+tribute.first 表示今日首次心意，daily_count 是收到此礼物时的今日累计件数；可表达欢迎与陪伴，不虚构历史、不要求继续送礼。撒网同样有专属头像名片。
+automatic_movement 是自主生活流程：去沙发小憩、窗边观景、喝茶或远眺，短暂停留后返回中央，也会走到门口换景。观众主动要求的睡觉不自动叫醒，不能把自主活动说成观众的指令。
 睡觉时允许梦话邀请观众发醒醒，梦话不等于醒来。BGM 是主播设置的循环背景音，不是点歌队列。
 冷场可以邀请观众发送钓鱼、换装等当前已启用的口令；邀请不等于已执行，不能声称已经切换或捕获。
 最新状态优先于聊天历史；到达目的地前不能说已经睡着，停车后未下车仍在车内。
@@ -103,8 +105,7 @@ def runtime_context(brain, hub, playlist, now=None, statistics=metrics):
     else:
         primary = "站在场景中休息" if world["enabled"] else "在经典舞台待机"
     return {"paused": brain.paused, "primary_activity": primary, "world": world, "reaction": reaction, "fishing": fishing,
-            "automatic_movement": {"enabled": Effective.idle()["movement_enabled"],
-                                   "active": bool(brain._auto_walk), "quiet_seconds": Effective.idle()["movement_seconds"]},
+            "automatic_movement": brain.autonomy_context(now),
             "gift_show": gift_show, "dream_talk": Effective.idle()["dream_talk"],
             "gift_interactions": {"enabled": Effective.gift_show()["enabled"],
                                   "effects": {"大啤酒": "热茶回礼或奶蛙短片", "鲜花": "捧花炫耀", "棒棒糖": "巨型棒棒糖",

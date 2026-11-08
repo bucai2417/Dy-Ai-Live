@@ -118,6 +118,7 @@ class LiveInteractions:
         await self._push_gift_show()
 
     def queue_gift_show(self, event):
+        from .scheduler import metrics
         self.gift_show.pause(self.paused)
         config = Effective.gift_show()
         if not config["enabled"] or not Effective.interact()["enabled"]:
@@ -127,10 +128,16 @@ class LiveInteractions:
         if not source.is_absolute():
             source = ROOT / source
         video_ready = config["beer_video"] and stage["video_enabled"] and source.is_file()
-        return self.gift_show.enqueue(event, video_ready)
+        return self.gift_show.enqueue(event, video_ready, metrics.gift_board.tribute(event.to_dict()))
 
     async def _push_gift_show(self):
         await self.live_bus.broadcast({"type": "gift_show", "show": self.gift_show.snapshot()}, remember=False)
+
+    def tick_gift_show(self, now=None):
+        show = self.gift_show.active
+        hold = (show and self._gift_voice_id == show["id"] and self._live_voice_task
+                and not self._live_voice_task.done() and self._live_voice_guard and self._live_voice_guard())
+        return self.gift_show.tick(now, hold=hold)
 
     async def sync_gift_show(self):
         self.sync_activity_pauses()
@@ -175,6 +182,8 @@ class LiveInteractions:
                 effect = show["effect"]
                 key = "gift_" + effect if effect in ("tea", "video", "flowers", "lollipop", "sunglasses") else "gift_special"
                 text = render_line(key, name=show["user"]["name"], gift=show["gift"])
+                if show.get("tribute", {}).get("daily_count"):
+                    text = render_line("gift_first" if show["tribute"].get("first") else "gift_return") + text
                 guard = lambda: (not self.paused and Effective.gift_show()["voice"]
                                  and bool(self.gift_show.active) and self.gift_show.active["id"] == identifier)
                 return text, guard, ("gift", identifier)
@@ -214,7 +223,11 @@ class LiveInteractions:
                 guard = lambda: (not self.paused and not self.gift_show.active and Effective.fishing()["voice"]
                                  and bool(self.fishing.net) and self.fishing.net["id"] == haul["id"]
                                  and (self.fishing.phase == phase or phase == "net_cast" and self.fishing.phase == "net_caught"))
-                return render_line("fishing_" + phase, **values), guard, ("fishing", key)
+                text = render_line("fishing_" + phase, **values)
+                tribute = haul["user"].get("tribute", {})
+                if phase == "net_cast" and tribute.get("daily_count"):
+                    text = render_line("gift_first" if tribute.get("first") else "gift_return") + text
+                return text, guard, ("fishing", key)
             key = (identifier, phase)
             category = "fishing_" + phase
             token = ("fishing", key)
@@ -267,7 +280,7 @@ class LiveInteractions:
                 return
         if self.speaker.busy or self._response_task or self._idle_preparing:
             return
-        candidate = self.live_voice_candidate()
+        candidate = self.autonomous_voice_candidate() or self.live_voice_candidate()
         if candidate is None:
             return
         text, guard, (kind, token) = candidate
@@ -279,6 +292,8 @@ class LiveInteractions:
             self._fishing_reminded = token
         elif kind == "fishing_auto":
             self._last_fishing_auto_voice = token
+        elif kind == "world_auto":
+            self._auto_voice_id = token
         else:
             self._last_dream_at = token
         self._live_voice_guard = guard

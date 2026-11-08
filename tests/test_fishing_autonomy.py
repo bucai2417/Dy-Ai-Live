@@ -172,6 +172,7 @@ def test_system_and_duplicate_likes_do_not_hide_silence(monkeypatch):
 
 def test_world_walk_yields_to_audience_but_not_overwrite_new_command(monkeypatch):
     async def scenario():
+        store.update({"idle": {"scene_interactions": False}})
         clock = [100]
         monkeypatch.setattr(scheduler.time, "monotonic", lambda: clock[0])
         brain = scheduler.Brain()

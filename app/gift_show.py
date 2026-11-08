@@ -40,14 +40,19 @@ class GiftShow:
         self.seen = deque(maxlen=4096)
         self.started = 0.0
         self.paused_at = None
+        self.holding = False
 
-    def enqueue(self, event, video_ready=False):
+    def enqueue(self, event, video_ready=False, tribute=None):
         if event.id in self.seen:
             return True
         key = (event.user_id or event.user_name, event.gift_name)
         for item in self.pending:
             if (item["user"]["id"] or item["user"]["name"], item["gift"]) == key:
                 item["count"] += max(1, event.gift_count)
+                if tribute:
+                    item["tribute"]["daily_count"] = tribute["daily_count"]
+                if event.avatar:
+                    item["user"]["avatar"] = event.avatar
                 self.seen.append(event.id)
                 return True
         if len(self.pending) >= 100:
@@ -56,16 +61,21 @@ class GiftShow:
         label, duration = SHOWS[effect]
         self.pending.append({"id": event.id, "effect": effect, "label": label, "duration": duration,
                              "gift": event.gift_name or "礼物", "count": max(1, event.gift_count),
-                             "user": {"id": event.user_id, "name": event.user_name, "avatar": event.avatar}})
+                             "user": {"id": event.user_id, "name": event.user_name, "avatar": event.avatar},
+                             "tribute": copy.deepcopy(tribute or {})})
         self.seen.append(event.id)
         return True
 
-    def tick(self, now=None):
+    def tick(self, now=None, hold=False):
         if self.paused_at is not None:
             return False
         now = time.monotonic() if now is None else now
         changed = False
-        if self.active and now - self.started >= self.active["duration"]:
+        holding = bool(self.active and hold and self.active["duration"] - 1.2 <= now - self.started < 30)
+        if holding != self.holding:
+            self.holding = holding
+            changed = True
+        if self.active and now - self.started >= self.active["duration"] and not self.holding:
             self.active = None
             changed = True
         if self.active is None and self.pending:
@@ -77,6 +87,7 @@ class GiftShow:
     def clear(self):
         self.active = None
         self.pending.clear()
+        self.holding = False
 
     def pause(self, paused, now=None):
         now = time.monotonic() if now is None else now
@@ -88,5 +99,8 @@ class GiftShow:
 
     def snapshot(self, now=None):
         now = self.paused_at if self.paused_at is not None else time.monotonic() if now is None else now
-        return {"active": copy.deepcopy(self.active), "elapsed": max(0, now - self.started) if self.active else 0,
+        elapsed = max(0, now - self.started) if self.active else 0
+        if self.holding and self.active:
+            elapsed = min(elapsed, self.active["duration"] - 1.2)
+        return {"active": copy.deepcopy(self.active), "elapsed": elapsed, "holding": self.holding,
                 "pending": len(self.pending), "paused": self.paused_at is not None}

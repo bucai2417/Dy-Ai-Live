@@ -29,8 +29,13 @@ class FishingActivities:
         underlying = (self.interruption or {}).get("phase", self.phase)
         if underlying == "hooked":
             return False
-        user = {"id": str((user or {}).get("id") or "")[:100],
-                "name": str((user or {}).get("name") or "观众")[:80]}
+        details = user or {}
+        user = {"id": str(details.get("id") or "")[:100],
+                "name": str(details.get("name") or "观众")[:80]}
+        if details.get("avatar"):
+            user["avatar"] = str(details["avatar"])[:2048]
+        if details.get("tribute"):
+            user["tribute"] = copy.deepcopy(details["tribute"])
         key = user["id"] or user["name"]
         pending = next((entry for entry in self.net_queue if entry["key"] == key), None)
         if pending is None and len(self.net_queue) >= 32:
@@ -44,6 +49,8 @@ class FishingActivities:
         pending["count"] += min(10000, int(count))
         pending["value"] = min(1000000, pending["value"] + amount)
         pending["estimated"] |= not known
+        if pending["user"].get("tribute", {}).get("first"):
+            user.setdefault("tribute", {})["first"] = True
         pending["user"] = user
         if event_id:
             self.gift_seen.append(event_id)

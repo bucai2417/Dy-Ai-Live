@@ -8,9 +8,10 @@ from ..world import CAMERAS, SCENES, WEATHERS
 
 
 class Preferences(QDialog):
-    def __init__(self, client, parent=None):
+    def __init__(self, client, parent=None, audio=None):
         super().__init__(parent)
         self.client = client
+        self.audio = audio
         self.setWindowTitle("直播设置")
         self.resize(650, 650)
         self.fields = {}
@@ -64,8 +65,16 @@ class Preferences(QDialog):
         self._field("idle", "invite_seconds", "玩法邀请最短间隔（秒）", (30, 3600, 10))
         self._field("idle", "actions_enabled", "无人互动时自动做动作", "bool")
         self._field("idle", "action_seconds", "冷场动作间隔（秒）", (5, 3600, 1))
-        self._field("idle", "movement_enabled", "普通场景久无互动时自动散步", "bool")
-        self._field("idle", "movement_seconds", "自动散步前安静多久（秒）", (30, 3600, 5))
+        self._field("idle", "movement_enabled", "普通场景久无互动时自主活动", "bool")
+        self._field("idle", "movement_seconds", "自主活动前安静多久（秒）", (30, 3600, 5))
+        self._field("idle", "scene_interactions", "自动到沙发小憩、窗边观景、喝茶等", "bool")
+        self._field("idle", "interaction_seconds", "到达后停留时长（上下浮动 20%）", (8, 60, 1))
+        self._field("idle", "scene_switching", "允许自主走到门口切换场景", "bool")
+        self._field("idle", "scene_switch_seconds", "同一场景最少停留（秒）", (120, 3600, 30))
+        self._field("idle", "movement_voice", "自主活动时说出想法（话术可编辑）", "bool")
+        note = QLabel("小憩、观景后自动起身回中央，再等待下一轮。真实观众互动优先；观众主动要求睡觉时不会自动叫醒。常驻钓鱼使用独立的钓台小动作和换点规则。")
+        note.setWordWrap(True)
+        self.form.addRow(note)
         self._field("idle", "action_mode", "动作选择", [("依次轮换", "cycle"), ("随机不连续重复", "random")])
         self._field("idle", "speech_during_music", "音乐播放期间也允许冷场聊天", "bool")
         self.idle_actions = {}
@@ -197,12 +206,22 @@ class Preferences(QDialog):
         self._tab("背景 BGM")
         self._field("bgm", "enabled", "循环播放背景音乐", "bool")
         self.bgm_file = self._field("bgm", "path", "本地音频路径")
+        self.bgm_file.textEdited.connect(self._bgm_edited)
         choose = QPushButton("选择背景音乐文件…")
         choose.clicked.connect(self._choose_bgm)
         self.form.addRow(choose)
         self._field("bgm", "volume", "背景音量（0–1）", (0, 1, .05))
         self._field("bgm", "duck", "说话 / 视频期间音量比例", (0, 1, .05))
-        note = QLabel("保存后立即循环播放。点歌时背景 BGM 自动暂歇，歌曲停止后恢复；直播暂停、断线时暂停，恢复后续播。")
+        self.bgm_status = QLabel(audio.bgm_status() if audio else "保存后在工作台播放背景音乐")
+        self.bgm_status.setWordWrap(True)
+        self.form.addRow("当前播放状态", self.bgm_status)
+        if audio:
+            audio.bgm_status_changed.connect(self.bgm_status.setText)
+            retry = QPushButton("重试已保存的 BGM")
+            retry.clicked.connect(audio.retry_bgm)
+            self.form.addRow(retry)
+        note = QLabel("选择文件后自动勾选开启，保存后循环播放。点歌实际播放时 BGM 暂歇，停止或失败后恢复。直播暂停、断线时暂停。\n"
+                      "此处状态对应已保存配置。OBS 媒体源只有画面，声音请添加本工作台的应用程序音频捕获。")
         note.setWordWrap(True)
         self.form.addRow(note)
         self._tab("滚动公告")
@@ -282,6 +301,12 @@ class Preferences(QDialog):
                                              "音频文件 (*.mp3 *.wav *.ogg *.flac *.m4a *.aac);;所有文件 (*)")
         if path:
             self.bgm_file.setText(path)
+            self._bgm_edited(path)
+
+    def _bgm_edited(self, path):
+        if path.strip():
+            self.fields[("bgm", "enabled")].setChecked(True)
+            self.bgm_status.setText("已选择背景音乐并勾选开启，点击“保存并生效”开始播放")
 
     def _response(self, route, result):
         if route == "GET /api/config":
