@@ -147,7 +147,7 @@ class LiveInteractions:
         await self.live_bus.broadcast({"type": "world", "world": self.world.snapshot()}, remember=False)
 
     def fishing_result_speaking(self):
-        return (self.fishing.phase in ("caught", "escaped") and self._live_voice_task
+        return (self.fishing.phase in ("caught", "escaped", "net_caught") and self._live_voice_task
                 and not self._live_voice_task.done() and self._live_voice_guard()
                 and self.fishing.snapshot()["phase_elapsed"] < 30)
 
@@ -184,6 +184,18 @@ class LiveInteractions:
                 return None
             game = self.fishing.snapshot()
             identifier, phase = game["round_id"], game["phase"]
+            if phase in ("net_cast", "net_caught"):
+                haul = game["net"]
+                key = (haul["id"], phase)
+                if self._fishing_voice_key == key:
+                    return None
+                values = {"name": haul["user"]["name"], "gift": haul["gift"],
+                          "count": len(haul["fish"]), "value": haul["total"],
+                          "fish": "、".join(fish["name"] for fish in haul["fish"])}
+                guard = lambda: (not self.paused and not self.gift_show.active and Effective.fishing()["voice"]
+                                 and bool(self.fishing.net) and self.fishing.net["id"] == haul["id"]
+                                 and (self.fishing.phase == phase or phase == "net_cast" and self.fishing.phase == "net_caught"))
+                return render_line("fishing_" + phase, **values), guard, ("fishing", key)
             key = (identifier, phase)
             category = "fishing_" + phase
             token = ("fishing", key)

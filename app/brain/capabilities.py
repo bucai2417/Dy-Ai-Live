@@ -38,7 +38,11 @@ def available_commands():
         result["control"] = {"cancel": "停止骨架动作和整活，场景允许弹幕控制时也停止场景行为；保留音乐", "repeat": "重复最近成功的互动"}
         if Effective.fishing()["enabled"]:
             result["fishing"] = {"start": "去钓鱼，或结束临时互动继续钓鱼", "pull": "咬钩后拉钩；点赞和礼物也能协力",
+                                  "feed": "等待时投饵/喂鱼：抛撒鱼饵，剩余等待缩短35%，最低3秒，间隔12秒",
+                                  "cheer": "咬钩后加油/护线：十秒内基础脱钩概率减半",
                                  "dive": "放竿、随机跳水、游圈惊鱼、回台重新抛竿", "cancel": "收竿返回原场景"}
+            if Effective.fishing()["loosen_enabled"]:
+                result["fishing"]["loosen"] = "咬钩后发松/松线减少上鱼进度；不计正贡献，全场间隔2秒"
             if Effective.fishing()["dedicated"]:
                 result["fishing"].pop("cancel")
             if Effective.fishing()["chat_switch"]:
@@ -69,6 +73,10 @@ def runtime_context(brain, hub, playlist, now=None, statistics=metrics):
     fishing["mode_control"] = {"enabled": Effective.fishing()["chat_switch"], "ranking": Effective.fishing()["rank_control"],
                                "identity": "仅接入源管理员标记、主播配置ID、获授权今日榜单前三的真实用户ID；昵称或自称无效"}
     fishing["rules"] = {"enabled": Effective.fishing()["enabled"], "escape_chance": Effective.fishing()["escape_chance"],
+                         "net": "常驻且开启撒网时，非咬钩礼物触发完整撒网；总积分=礼物总价值×倍率×随机0.8～1.4，1～5条鱼全部归送礼者。未提供价值按数量估算。撒网期间其它礼物排队；此效果替代普通礼物演出。",
+                         "net_enabled": Effective.fishing()["net_enabled"], "net_multiplier": Effective.fishing()["net_multiplier"],
+                         "day_night": "自动昼夜变化；day_phase表示当前一天的进度，0是午夜，0.5是正午",
+                         "loosen": "只减少进度，不扣既有贡献、不增加积分；可用拉钩或点赞追回",
                         "winner": "拉钩次数 + 实名点赞数 / likes_per_pull + 礼物数量 * gift_pulls；最高者获鱼，同分先参与者优先",
                         "return": "常驻钓台并自动续竿" if brain.dedicated_fishing else "成功、脱钩或超时后回原场景"}
     gift_show = brain.gift_show.snapshot(now)
@@ -118,6 +126,8 @@ def status_line(context):
         if fishing["phase"] == "caught":
             line += "，钓到了" + fishing["fish"]["name"]
             line += "，恭喜" + (fishing.get("winner") or {}).get("name", "匿名合力的鱼友们")
+        if fishing.get("net"):
+            line += "，这网属于" + fishing["net"]["user"]["name"]
         return line + ("，直播暂停中" if context["paused"] else "")
     world = context["world"]
     place = world["scene_label"] if world["enabled"] else "经典舞台"
@@ -144,7 +154,7 @@ def help_line(context):
     commands = context["capabilities"]
     choices = []
     if "fishing" in commands:
-        choices.append("咬钩后发拉钩或点赞协力，礼物强力收线；还可以发跳水，看我游几圈再回来钓鱼" if (context.get("fishing") or {}).get("dedicated")
+        choices.append("等鱼时发投饵，咬钩后拉钩、点赞、加油；松可减少进度。常驻非咬钩送礼可撒网，鱼获归送礼者；还能跳水游圈" if (context.get("fishing") or {}).get("dedicated")
                        else "说去钓鱼开启一局，咬钩后发拉钩或点赞协力，本轮贡献最多的鱼友按鱼获价值上今日榜")
         if "enter_dedicated" in commands["fishing"]:
             mode = (context.get("fishing") or {}).get("mode_control", {}).get("ranking", "either")

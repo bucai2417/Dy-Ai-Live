@@ -56,7 +56,7 @@ class FishingBoard:
                 "species": [{"kind": kind, "name": FISH[kind]["name"], "count": count} for kind, count in self.species.items() if kind in FISH_KINDS],
                 "items": [{"kind": kind, "name": FISH[kind]["name"], "count": count} for kind, count in self.species.items() if kind in ITEM_KINDS],
                 "encounters": len(self.encounters), "species_total": len(FISH_KINDS), "items_total": len(ITEM_KINDS),
-                "rule": "今日累计鱼获价值；成功捕获计入拉钩、实名点赞与礼物合计贡献最高者，同分先参与者优先"}
+                "rule": "今日累计鱼获价值；鱼竿收获归拉钩、实名点赞与礼物合计贡献最高者，同分先参与优先；礼物撒网鱼获全部归送礼者"}
 
     def export(self):
         return copy.deepcopy({"records": self.records, "rounds": sorted(self.rounds), "community": self.community,

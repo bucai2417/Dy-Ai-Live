@@ -19,6 +19,7 @@ class Event:
     gift_count: int = 0
     # 礼物价值（钻石/音浪），未知时给个保守估值用于打分
     gift_value: int = 0
+    gift_value_estimated: bool = False
     avatar: str = ""
     ts: float = field(default_factory=time.time)
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
@@ -40,6 +41,7 @@ class Event:
             "giftName": self.gift_name,
             "giftCount": self.gift_count,
             "giftValue": self.gift_value,
+            "giftValueEstimated": self.gift_value_estimated,
             "avatar": self.avatar,
             "ts": self.ts,
             "answered": self.answered,

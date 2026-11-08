@@ -141,6 +141,7 @@ class Brain(LiveInteractions):
         self.fishing = FishingGame(Effective.fishing())
         self.init_live_interactions()
         self._fishing_scored_round = ""
+        self._fishing_scored_net = ""
         self.likes.configure(Effective.like_goal(), Effective.interact()["enabled"])
         self._likes_dirty = False
         self.last_activity_at = time.time()
@@ -329,11 +330,15 @@ class Brain(LiveInteractions):
         # 统计先记：礼物榜/token 消耗要包含被过滤掉的事件，否则数据会少
         if ev.kind == "gift":
             metrics.add_gift(ev)
+            net_gift = False
             if not self.paused and Effective.interact()["enabled"]:
-                if self.fishing.add_gift(ev.gift_count or 1, {"id": ev.user_id, "name": ev.user_name}, ev.id):
+                donor = {"id": ev.user_id, "name": ev.user_name}
+                net_value = 0 if ev.gift_value_estimated else ev.gift_value
+                net_gift = self.fishing.add_net_gift(ev.gift_count or 1, net_value, donor, ev.id, ev.gift_name)
+                if net_gift or self.fishing.add_gift(ev.gift_count or 1, donor, ev.id):
                     await self._sync_fishing()
             await hub.broadcast({"type": "gift_ranking", "ranking": metrics.gift_board.snapshot()}, remember=False)
-            if (not self.paused and Effective.interact()["enabled"] and not Effective.gift_show()["enabled"]
+            if (not self.paused and Effective.interact()["enabled"] and (net_gift or not Effective.gift_show()["enabled"])
                     and "墨镜" in (ev.gift_name or "").replace("鏡", "镜")):
                 from ..wardrobe import wear
                 try:
@@ -341,11 +346,15 @@ class Brain(LiveInteractions):
                 except OSError:
                     log.exception("墨镜装扮保存失败，本次仍显示配饰")
                     await hub.broadcast({"type": "costume", "name": "cool", "event_id": ev.id}, remember=False)
-            if self.queue_gift_show(ev):
+            if not net_gift and self.queue_gift_show(ev):
                 if self.gift_show.tick():
                     await self.sync_gift_show()
                 else:
                     await self._push_gift_show()
+            if net_gift:
+                ev.answered = True
+                await hub.broadcast({"type": "answered", "id": ev.id})
+                return True
         if ev.kind == "chat" and self._allow(ev) and Effective.interact()["enabled"]:
             from .intent import Intent, local_intent, video_requested
             intent = local_intent(ev.text)
@@ -396,6 +405,17 @@ class Brain(LiveInteractions):
         await hub.broadcast({"type": "fishing", "fishing": self.fishing.snapshot()}, remember=False)
 
     async def _sync_fishing(self):
+        if (self.fishing.phase == "net_caught" and self.fishing.net
+                and self._fishing_scored_net != self.fishing.net["id"]):
+            haul = self.fishing.net
+            changed = False
+            for index, fish in enumerate(haul["fish"]):
+                identifier = "net:" + haul["id"] + ":" + str(index)
+                changed |= bool(metrics.add_fish_encounter(identifier, fish))
+                changed |= bool(metrics.add_catch(identifier, fish, haul["user"]))
+            self._fishing_scored_net = haul["id"]
+            if changed:
+                await hub.broadcast({"type": "stats", "stats": metrics.snapshot(Effective.pricing())}, remember=False)
         if self.fishing.fish and metrics.add_fish_encounter(self.fishing.round_id, self.fishing.fish):
             await hub.broadcast({"type": "stats", "stats": metrics.snapshot(Effective.pricing())}, remember=False)
         if self.fishing.phase == "caught" and self._fishing_scored_round != self.fishing.round_id:
@@ -442,9 +462,15 @@ class Brain(LiveInteractions):
                 user = {"id": ev.user_id, "name": ev.user_name} if ev and not manual else None
                 self.fishing.pull(user=user, event_id=ev.id if ev else "")
                 label = "已协力收线"
+            elif operation in ("loosen", "feed", "cheer"):
+                user = {"id": ev.user_id, "name": ev.user_name} if ev and not manual else None
+                self.fishing.fish_action(operation, user, ev.id if ev else "")
+                label = {"loosen": "鱼线松开了，上鱼进度下降，快发拉钩追回来！",
+                         "feed": "撒一把鱼饵引鱼，缩短这次等待时间",
+                         "cheer": "加油护线！接下来十秒每次拉钩的基础脱钩概率减半"}[operation]
             elif operation == "cancel":
                 if self.dedicated_fishing:
-                    raise ValueError("当前是钓鱼专用直播，请在设置中关闭常驻钓鱼后再收竿")
+                    raise ValueError("当前是常驻钓鱼。管理员或获授权榜单前三可发“退出常驻钓鱼”；主播也可在场景导演退出或设置中关闭")
                 if not self.fishing.active:
                     raise ValueError("现在没有在钓鱼")
                 self.fishing.cancel()

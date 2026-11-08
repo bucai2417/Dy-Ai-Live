@@ -134,13 +134,16 @@ def normalize(raw: Any) -> Event | None:
             data, "giftCount", "GiftCount", "gift_count", "repeatCount", "RepeatCount",
             "count", "Count", "num",
         ) or 1
-        val = _pick(data, "giftValue", "GiftValue", "diamond", "Diamond", "price", "Price") or 1
+        val = _pick(data, "giftValue", "GiftValue", "diamond", "Diamond", "price", "Price")
+        estimated = val in (None, "", 0)
         try:
-            cnt, val = int(cnt), int(val)
+            cnt, val = int(cnt), int(val or 1)
+            estimated |= val <= 0
         except Exception:
             cnt, val = 1, 1
+            estimated = True
         return Event(kind="gift", user_id=uid, user_name=name, gift_name=gname,
-                     gift_count=cnt, gift_value=val * cnt, text=f"送出了{gname}x{cnt}", avatar=avatar)
+                     gift_count=cnt, gift_value=val * cnt, gift_value_estimated=estimated, text=f"送出了{gname}x{cnt}", avatar=avatar)
 
     if kind == "enter":
         return Event(kind="enter", user_id=uid, user_name=name, avatar=avatar)

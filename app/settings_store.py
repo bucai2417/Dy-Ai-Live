@@ -198,6 +198,12 @@ DEFAULTS: dict[str, Any] = {
         "rank_control": "either",
         "admin_ids": "",
         "item_chance": 0.18,
+        "day_mode": "cycle",
+        "day_cycle": 600,
+        "net_enabled": True,
+        "net_multiplier": 20,
+        "loosen_enabled": True,
+        "loosen_amount": 0.08,
     },
     "gift_show": {"enabled": True, "voice": True, "beer_video": True},
     "bgm": {"enabled": False, "path": "", "volume": 0.2, "duck": 0.25},
@@ -384,6 +390,7 @@ def _validate_config(data: dict, defaults: dict = DEFAULTS, path: str = "") -> N
         ("world", "weather", ("clear", "rain", "snow", "night")),
         ("world", "camera", ("front", "left", "right", "close", "overhead")),
         ("fishing", "rank_control", ("either", "fishing", "gifts", "admins")),
+        ("fishing", "day_mode", ("cycle", "realtime", "day", "night")),
     ):
         value = data.get(section, {}).get(key)
         if value is not None and value not in choices:
@@ -396,6 +403,8 @@ def _validate_config(data: dict, defaults: dict = DEFAULTS, path: str = "") -> N
         ("filters", "max_input_chars", 1, 10000),
         ("like_goal", "step", 1, 1000000),
         ("fishing", "likes_per_pull", 1, 10000),
+        ("fishing", "day_cycle", 120, 7200),
+        ("fishing", "net_multiplier", 1, 1000),
         ("stage", "subtitle_size", 14, 26),
     ):
         value = data.get(section, {}).get(key)
@@ -421,6 +430,8 @@ def _validate_config(data: dict, defaults: dict = DEFAULTS, path: str = "") -> N
         raise ValueError("管理员用户ID最多4000字")
     if not 0 <= fishing.get("item_chance", .18) <= .5:
         raise ValueError("趣味物品概率应在0～0.5之间")
+    if not .01 <= fishing.get("loosen_amount", .08) <= .25:
+        raise ValueError("松线每次减少的进度须在 0.01～0.25 之间")
     for prefix in ("bite", "fight"):
         low, high = fishing.get(prefix + "_min", DEFAULTS["fishing"][prefix + "_min"]), fishing.get(prefix + "_max", DEFAULTS["fishing"][prefix + "_max"])
         if not 3 <= low <= high <= 300:
@@ -726,7 +737,13 @@ class Effective:
                 "gift_pulls": int(_clamp(cfg.get("gift_pulls", 5), 2, 30, 5)), **timing,
                 "chat_switch": bool(cfg.get("chat_switch", True)), "rank_control": cfg.get("rank_control", "either"),
                 "admin_ids": str(cfg.get("admin_ids", "")),
-                "item_chance": _clamp(cfg.get("item_chance", .18), 0, .5, .18)}
+                "item_chance": _clamp(cfg.get("item_chance", .18), 0, .5, .18),
+                "day_mode": cfg.get("day_mode", "cycle") if cfg.get("day_mode", "cycle") in ("cycle", "realtime", "day", "night") else "cycle",
+                "day_cycle": int(_clamp(cfg.get("day_cycle", 600), 120, 7200, 600)),
+                "net_enabled": bool(cfg.get("net_enabled", True)),
+                "net_multiplier": int(_clamp(cfg.get("net_multiplier", 20), 1, 1000, 20)),
+                "loosen_enabled": bool(cfg.get("loosen_enabled", True)),
+                "loosen_amount": _clamp(cfg.get("loosen_amount", .08), .01, .25, .08)}
 
     @staticmethod
     def gift_show() -> dict:

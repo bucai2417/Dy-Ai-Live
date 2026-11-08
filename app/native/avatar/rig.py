@@ -95,12 +95,26 @@ def joint_pose(reaction, now, elapsed):
     elif motion == "drive":
         target = {"upper_left": 32, "upper_right": -32, "forearm_left": -80, "forearm_right": 80,
                   "head": math.sin(age * 1.5) * 5, "tail": 12}
-    elif motion in ("fishing", "fishing_pull"):
+    elif motion in ("net_windup", "net_cast", "net_haul", "fishing_feed"):
+        stroke = math.sin(age * 4)
+        if motion == "net_windup":
+            target = {"upper_right": -100, "forearm_right": 65, "upper_left": 65, "forearm_left": -90, "torso": -12, "head": -8, "tail": -16}
+        elif motion in ("net_cast", "fishing_feed"):
+            target = {"upper_right": -72 + stroke * 14, "forearm_right": -28, "hand_right": 20,
+                      "upper_left": 25, "forearm_left": -65, "torso": 9, "head": 12, "tail": 12}
+        else:
+            target = {"upper_right": -32 + stroke * 12, "forearm_right": -80 + stroke * 18,
+                      "upper_left": 30 - stroke * 12, "forearm_left": -70 - stroke * 18, "torso": -6 + stroke * 3, "tail": -25}
+    elif motion in ("fishing", "fishing_pull", "fishing_loosen", "fishing_cheer"):
         pulling = motion == "fishing_pull"
         target = {"upper_left": 24, "forearm_left": -82, "upper_right": -48 if pulling else -28,
                   "forearm_right": -58 if pulling else -82, "hand_right": -15,
                   "head": -7 if pulling else 8, "torso": -4 if pulling else 4,
                   "tail": -48, "fin_left": 25, "fin_right": -18}
+        if motion == "fishing_loosen":
+            target.update(upper_right=-12, forearm_right=-35, head=math.sin(age * 5) * 12, torso=8)
+        elif motion == "fishing_cheer":
+            target.update(upper_left=145 + math.sin(age * 6) * 10, forearm_left=-30, head=-5)
     elif motion == "sleep":
         target = {"upper_left": 28, "upper_right": -18, "forearm_left": -95, "forearm_right": 55,
                   "head": -12, "tail": 16, "fin_left": 14, "fin_right": -12}

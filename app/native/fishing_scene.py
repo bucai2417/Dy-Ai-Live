@@ -17,6 +17,9 @@ def fishing_view(state, now):
             "phase_elapsed": game.get("phase_elapsed", 0) + extra,
             "pull_age": game.get("pull_age", 100) + extra,
             "gift_age": game.get("gift_age", 100) + extra,
+            "activity_age": game.get("activity_age", 100) + extra,
+            "cheer_remaining": max(0, game.get("cheer_remaining", 0) - extra),
+            "day_phase": (game.get("day_phase", .5) + extra * game.get("day_speed", 0)) % 1,
             "remaining": max(0, game.get("remaining", 0) - extra)}
 
 
@@ -85,36 +88,42 @@ def fish_image(kind):
 class FishingRenderer:
     def __init__(self):
         self.fish_images = {kind: fish_image(kind) for kind in FISH}
-        self.background_key = None
-        self.background = None
+        self.backgrounds = {}
 
-    def _background(self, height):
-        if self.background_key == height:
-            return self.background
+    def _background(self, height, night=False):
+        key = (math.ceil(height), night)
+        if key in self.backgrounds:
+            return self.backgrounds[key]
         image = QImage(960, math.ceil(height), QImage.Format.Format_ARGB32_Premultiplied)
         image.fill(0)
         painter = QPainter(image)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         sky = QLinearGradient(0, 0, 0, height)
-        sky.setColorAt(0, QColor("#1d4e65"))
-        sky.setColorAt(.48, QColor("#a3c6bc"))
+        sky.setColorAt(0, QColor("#081329" if night else "#1d4e65"))
+        sky.setColorAt(.48, QColor("#344c70" if night else "#a3c6bc"))
         sky.setColorAt(1, QColor("#092e43"))
         painter.fillRect(image.rect(), sky)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor("#f6dfad"))
         painter.drawEllipse(QPointF(760, height * .20), 35, 35)
+        if night:
+            painter.setBrush(QColor("#14233d"))
+            painter.drawEllipse(QPointF(774, height * .20 - 9), 30, 30)
+            for index in range(55):
+                painter.setBrush(QColor(199, 224, 251, 90 + index % 5 * 30))
+                painter.drawEllipse(QPointF((index * 137 + 29) % 950, 25 + (index * 47) % max(30, int(height * .28))), 1 + index % 2, 1 + index % 2)
         for layer, color in ((0, "#5d8f95"), (1, "#367681"), (2, "#235d6e")):
             points = [QPointF(0, height * .55)]
             for index in range(15):
                 points.append(QPointF(index * 72, height * (.32 + layer * .06) - math.sin(index * 1.3 + layer) * 35))
             points.append(QPointF(960, height * .55))
-            painter.setBrush(QColor(color))
+            painter.setBrush(QColor(color).darker(210) if night else QColor(color))
             painter.drawPolygon(QPolygonF(points))
         water_top = height * .52
         water = QLinearGradient(0, water_top, 0, height)
-        water.setColorAt(0, QColor("#3e9eaa"))
-        water.setColorAt(.28, QColor("#226a83"))
-        water.setColorAt(1, QColor("#10344e"))
+        water.setColorAt(0, QColor("#264766" if night else "#3e9eaa"))
+        water.setColorAt(.28, QColor("#19334d" if night else "#226a83"))
+        water.setColorAt(1, QColor("#101f37" if night else "#10344e"))
         painter.fillRect(QRectF(0, water_top, 960, height - water_top), water)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(198, 238, 214, 18))
@@ -127,7 +136,9 @@ class FishingRenderer:
             path.cubicTo(horizontal - 28, height - 100, horizontal + 30, height - 110, horizontal, height - 145)
             painter.drawPath(path)
         painter.end()
-        self.background_key, self.background = height, image
+        if len(self.backgrounds) >= 4:
+            self.backgrounds.clear()
+        self.backgrounds[key] = image
         return image
 
     def draw(self, painter, scene, state, bounds, now, show_actor=True):
@@ -143,6 +154,13 @@ class FishingRenderer:
         clip.addRoundedRect(QRectF(0, 0, 960, height), 28, 28)
         painter.setClipPath(clip)
         painter.drawImage(QPointF(), self._background(height))
+        day_phase = game.get("day_phase", .5)
+        daylight = smooth((.5 - math.cos(day_phase * math.tau) * .5 - .20) / .60)
+        if daylight < 1:
+            painter.save()
+            painter.setOpacity(1 - daylight)
+            painter.drawImage(QPointF(), self._background(height, True))
+            painter.restore()
         surface, bottom = height * .52, height - 100
         painter.setPen(QPen(QColor(191, 241, 223, 85), 1.5))
         for index in range(15):
@@ -165,6 +183,10 @@ class FishingRenderer:
                 direction = -1 if horizontal < 580 else 1
                 horizontal += direction * flight * 1150
                 forward = direction > 0
+            if (game.get("interruption") or {}).get("action") == "feed":
+                approach = smooth(game["phase_elapsed"] / 4.5) * .65
+                horizontal += (520 + index % 4 * 32 - horizontal) * approach
+                vertical += (surface + 45 + index % 3 * 18 - vertical) * approach
             self._fish(painter, swimmer["kind"], horizontal, vertical, 75 * preset["size"], forward, .78)
         painter.setPen(QPen(QColor(190, 243, 238, 65), 1))
         painter.setBrush(Qt.BrushStyle.NoBrush)
@@ -192,7 +214,11 @@ class FishingRenderer:
         painter.setPen(QPen(QColor("#365b62"), 5))
         for horizontal in (125, 217):
             painter.drawLine(QPointF(horizontal, dock_top - 29), QPointF(horizontal + 5, dock_top + 8))
-        if phase == "diving":
+        from .fishing_actions_scene import draw_fishing_action, draw_lantern
+        draw_lantern(painter, dock_top, 1 - daylight, clock)
+        if phase in ("net_cast", "net_caught") or (game.get("interruption") or {}).get("action") == "feed":
+            draw_fishing_action(painter, scene, state, game, height, now, show_actor, self)
+        elif phase == "diving":
             from .diving_scene import draw_dive
             draw_dive(painter, scene, state, game, height, now, show_actor)
         elif phase == "interacting":
@@ -200,7 +226,8 @@ class FishingRenderer:
         else:
             self._angler(painter, scene, state, game, height, now, show_actor, dock_top, clock, phase, surface, bottom, fish)
         scene.outlined(painter, (583, 19, 350, 26), "云汐钓台 · 常驻" if game.get("dedicated") else "云汐钓台 · 协力", 22, "#f3dfb5", True, "right")
-        scene.outlined(painter, (533, 47, 400, 23), f"{len(FISH_KINDS)} 种水族 / {len(ITEM_KINDS)} 件奇物", 15, "#c7e2df", align="right")
+        light_label = "夜钓" if daylight < .15 else "白昼" if daylight > .85 else "晨曦" if day_phase < .5 else "暮色"
+        scene.outlined(painter, (533, 47, 400, 23), f"{light_label} · {len(FISH_KINDS)} 种水族 / {len(ITEM_KINDS)} 件奇物", 15, "#c7e2df", align="right")
         if game.get("dedicated"):
             self._species(painter, scene, state, game, height)
         self._status(painter, scene, game, height)
@@ -257,7 +284,11 @@ class FishingRenderer:
         actor = QRectF(177 - character_width / 2, dock_top - 28 - character_height * .68, character_width, character_height)
         frozen_now = state.get("paused_at", now) if state.get("paused") else now
         pull = max(0, 1 - game["pull_age"] / .65)
-        reaction = {"motion": "fishing_pull" if pull > 0 else "fishing", "duration": 86400,
+        activity = game.get("activity") or {}
+        motion = "fishing_pull" if pull > 0 else "fishing"
+        if game.get("activity_age", 100) < 2.5 and activity.get("kind") in ("loosen", "cheer"):
+            motion = "fishing_" + activity["kind"]
+        reaction = {"motion": motion, "duration": 86400,
                     "started": frozen_now - 2 - clock, "animation_id": game.get("round_id", "") + str(pull > 0)}
         anchors = scene.draw_character(painter, state, actor, clock, frozen_now, reaction) if show_actor else None
         grip = QPointF(233, dock_top - 103)
@@ -283,7 +314,12 @@ class FishingRenderer:
         if phase == "caught":
             hook_y = surface - height * .24
         painter.setPen(QPen(QColor("#d8f4e8"), 1.7))
-        painter.drawLine(tip, QPointF(hook_x, hook_y))
+        if motion == "fishing_loosen":
+            slack = QPainterPath(tip)
+            slack.cubicTo(tip.x() + 90, tip.y() + 80, hook_x - 100, hook_y - 50, hook_x, hook_y)
+            painter.drawPath(slack)
+        else:
+            painter.drawLine(tip, QPointF(hook_x, hook_y))
         if phase in ("hooked", "landing") and fish:
             fish_width = 90 * FISH[fish["kind"]]["size"]
             self._fish(painter, fish["kind"], hook_x - fish_width * .4, hook_y + 2, fish_width, True)
@@ -326,6 +362,15 @@ class FishingRenderer:
         title = {"waiting": "静候鱼讯 · 咬钩后点赞 / 拉钩收线", "hooked": "钩住奇物！发拉 / 拉钩或点赞打捞" if item else "咬钩了！发拉 / 拉钩或点赞收线",
                  "landing": "稳住！宝贝正在出水" if item else "稳住！鱼正在出水", "caught": "打捞成功！" if item else "捕获成功！",
                  "escaped": "这次差一点，再接再厉", "diving": "花式跳水 · 鱼群避让", "interacting": "放竿互动 · 表演后继续本轮"}.get(phase, "协力钓鱼")
+        if phase in ("net_cast", "net_caught"):
+            age = game["phase_elapsed"]
+            title = "专属鱼获 · 礼赠心意满载而归" if phase == "net_caught" else next(text for end, text in ((2, "放下鱼竿 · 提网蓄力"), (4.5, "挥臂撒网 · 网花入水"), (6.5, "沉网捕鱼 · 静候惊喜"), (float("inf"), "双手收网 · 鱼获出水")) if age < end)
+        elif (game.get("interruption") or {}).get("action") == "feed":
+            title = "投饵引鱼 · 鱼群聚拢，咬钩等待缩短"
+        elif game.get("activity_age", 100) < 3 and (game.get("activity") or {}).get("kind") == "loosen":
+            title = "鱼线松了！进度 -" + format(game["activity"].get("amount", 0), ".0%") + " · 快拉回来！"
+        elif game.get("cheer_remaining", 0) > 0 and phase == "hooked":
+            title = f"加油护线 {math.ceil(game['cheer_remaining'])} 秒 · 脱钩风险减半"
         if phase == "diving":
             dive = game.get("dive") or {}
             style = {"tuck": "抱团翻腾", "pike": "屈体前翻", "twist": "转体入水", "cannonball": "炮弹炸水"}.get(dive.get("style"), "花式跳水")
@@ -345,10 +390,12 @@ class FishingRenderer:
             hint = "常驻直播 · 自动续竿" if game.get("dedicated") else "发不钓了返回"
             if phase in ("diving", "interacting"):
                 hint = f"约 {math.ceil(game['remaining'])} 秒回钓台"
+            elif phase in ("net_cast", "net_caught"):
+                hint = f"完成后继续原鱼竿 · 等待撒网 {game.get('net_pending', 0)} 位鱼友"
             elif game.get("gift_pending"):
                 hint = f"已存 {game['gift_pending']} 件礼物助力，咬钩自动结算"
             else:
-                hint = f"礼物 × {game.get('gift_pulls', 5)} 次拉钩 · " + hint
+                hint = "发投饵 / 跳水 · 咬钩后发拉 / 加油" + (" · 松可捣蛋" if game.get("loosen_enabled", True) else "")
             scene.outlined(painter, (26, height - 31, 908, 24), hint, 15, "#b8d8d9")
 
     def _result(self, painter, scene, game, height):

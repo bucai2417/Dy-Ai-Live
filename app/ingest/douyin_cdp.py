@@ -463,6 +463,7 @@ class DouyinCDPIngestor:
         self._channel_events: list[tuple[str, str, str, float]] = []
         self._previous_lines: list[str] = []
         self._message_ids: dict[str, None] = {}
+        self._gift_combos: dict[tuple, int] = {}
         self._avatars: dict[str, str] = {}
         self._roster: dict[str, float] = {}
         self._enter_at: dict[str, float] = {}
@@ -742,7 +743,7 @@ class DouyinCDPIngestor:
             if avatar:
                 self._avatars[name] = avatar
             await self._emit(Event(kind="gift", user_name=name, gift_name=gift,
-                                   gift_count=cnt, gift_value=_gift_value(gift) * cnt,
+                                   gift_count=cnt, gift_value=_gift_value(gift) * cnt, gift_value_estimated=True,
                                    text=f"送出了{gift}x{cnt}", avatar=avatar))
         elif kind == "enter":
             if not self._enter_once(name):
@@ -856,7 +857,8 @@ class DouyinCDPIngestor:
                     continue
 
                 # 其余类型统一：取消息体第一个用户当动作发起者
-                user = self._first_user(payload, field_number=5 if method == "WebcastLikeMessage" else 2)
+                user_field = {"WebcastLikeMessage": 5, "WebcastGiftMessage": 7}.get(method, 2)
+                user = self._first_user(payload, field_number=user_field)
                 if not user and method != "WebcastLikeMessage":
                     continue
                 user = user or {}
@@ -865,12 +867,25 @@ class DouyinCDPIngestor:
                 self._roster[actor] = time.time()
 
                 if method == "WebcastGiftMessage":
-                    gift, cnt = self._gift_info(payload)
-                    self._emit_async(Event(
+                    gift, cnt, price, group, gift_id = self._gift_details(payload)
+                    if group:
+                        key = (user.get("id", ""), group, gift_id)
+                        previous = self._gift_combos.get(key, 0)
+                        self._gift_combos[key] = max(previous, cnt)
+                        cnt = max(0, cnt - previous)
+                        if len(self._gift_combos) > 2048:
+                            self._gift_combos.pop(next(iter(self._gift_combos)))
+                    if cnt <= 0:
+                        continue
+                    event = Event(
                         kind="gift", user_id=user.get("id", ""), user_name=actor, gift_name=gift, gift_count=cnt,
-                        gift_value=_gift_value(gift) * cnt,
+                        gift_value=(price or _gift_value(gift)) * cnt, gift_value_estimated=price <= 0,
                         text=f"送出了{gift}x{cnt}", avatar=avatar,
-                    ))
+                    )
+                    identifier = self._message_key(method, payload)
+                    if identifier:
+                        event.id = f"douyin:{self.room}:{identifier}"
+                    self._emit_async(event)
                 elif method == "WebcastMemberMessage":
                     if self._enter_once(actor):
                         self._emit_async(Event(kind="enter", user_name=actor, avatar=avatar))
@@ -973,25 +988,21 @@ class DouyinCDPIngestor:
 
     @staticmethod
     def _gift_info(payload: bytes) -> tuple[str, int]:
-        """GiftMessage：#15 Gift 结构，里面 #2 是礼物名，另有重复次数。"""
-        name, cnt = "礼物", 1
+        name, count, _, _, _ = DouyinCDPIngestor._gift_details(payload)
+        return name, count
+
+    @staticmethod
+    def _gift_details(payload: bytes) -> tuple[str, int, int, int, int]:
         fields = pb_decode(payload)
-        for f in fields:
-            if f.wire == 0 and f.num in (5, 6) and f.varint and 1 <= f.varint <= 9999:
-                cnt = int(f.varint)
-                break
-        for f in fields:
-            if f.wire == 2 and f.buf and f.num not in (1, 2):
-                sub = pb_decode(f.buf)
-                for s in sub:
-                    if s.num == 2 and s.wire == 2 and s.buf:
-                        cand = s.text()
-                        if 1 <= len(cand) <= 20 and not cand.startswith("http"):
-                            name = cand
-                            break
-                if name != "礼物":
-                    break
-        return name, max(1, cnt)
+        numbers = {field.num: field.varint for field in fields if field.wire == 0}
+        count = max(1, min(10000, int(numbers.get(5) or numbers.get(6) or numbers.get(4) or 1)))
+        gift = next((field.buf for field in fields if field.num == 15 and field.wire == 2), b"")
+        details = pb_decode(gift) if gift else []
+        names = {field.num: field.text() for field in details if field.wire == 2 and field.num in (2, 16)}
+        name = (names.get(16) or names.get(2) or "礼物")[:80]
+        price = next((field.varint for field in details if field.num == 12 and field.wire == 0), 0)
+        price = price if isinstance(price, int) and 0 < price <= 1000000 else 0
+        return name, count, price, numbers.get(11, 0), numbers.get(2, 0)
 
     @staticmethod
     def _like_count(payload: bytes) -> int:

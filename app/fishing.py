@@ -10,13 +10,15 @@ from collections import deque
 
 
 from .fishing_catalog import FISH, FISH_KINDS, ITEM_KINDS
+from .fishing_activities import FishingActivities
 
 PHASES = {"idle": "未在钓鱼", "waiting": "坐在高台持竿等待咬钩", "hooked": "鱼儿咬钩，等待大家协力收线",
           "landing": "正在把鱼拉出水面", "caught": "展示捕获结果并庆祝", "escaped": "鱼儿脱钩，本轮结束",
-          "interacting": "暂时放下鱼竿互动，结束后继续本轮", "diving": "离开鱼竿跳水游泳，回台后重新抛竿"}
+          "interacting": "暂时放下鱼竿互动，结束后继续本轮", "diving": "离开鱼竿跳水游泳，回台后重新抛竿",
+          "net_cast": "正在为送礼鱼友撒网、沉网、收网", "net_caught": "展示礼物专属鱼获并恭喜送礼鱼友"}
 
 
-class FishingGame:
+class FishingGame(FishingActivities):
     def __init__(self, config, rng=None):
         self.config = dict(config)
         self.rng = rng or random.Random()
@@ -40,6 +42,7 @@ class FishingGame:
         self.interruption = None
         self.dive = None
         self.last_gift = None
+        self.init_activities()
 
     @property
     def active(self):
@@ -64,6 +67,8 @@ class FishingGame:
         self.contributors.clear()
         self.reason = ""
         self.interruption = self.dive = self.last_gift = None
+        self.activity = None
+        self.cheer_until = 0
         self.seen.clear()
         kinds = self.rng.choices(FISH_KINDS, weights=[FISH[kind]["chance"] for kind in FISH_KINDS], k=12)
         self.school = [{"kind": kind, "phase": self.rng.random(), "depth": .12 + self.rng.random() * .75,
@@ -76,7 +81,7 @@ class FishingGame:
         return self.rng.uniform(minimum, maximum)
 
     def interrupt(self, label, duration, now=None):
-        if not self.active or self.phase == "diving" or self.paused_at is not None:
+        if not self.active or self.phase in ("diving", "net_cast", "net_caught") or self.paused_at is not None:
             raise ValueError("请等跳水或礼物演出完成后再互动")
         now = self._clock(now)
         if self.phase != "interacting":
@@ -86,6 +91,7 @@ class FishingGame:
         else:
             self.deadline = max(self.deadline, now + duration)
             self.interruption["label"] = label
+            self.interruption.pop("action", None)
             self.interruption["world"] |= label == "场景互动"
             self.revision += 1
 
@@ -104,7 +110,7 @@ class FishingGame:
         return True
 
     def start_dive(self, now=None):
-        if not self.active or self.paused_at is not None or self.phase == "diving":
+        if not self.active or self.paused_at is not None or self.phase in ("diving", "net_cast", "net_caught", "landing", "caught"):
             raise ValueError("请等当前演出完成后再跳水")
         now = self._clock(now)
         self.interruption = None
@@ -124,6 +130,8 @@ class FishingGame:
         if not self.active or self.paused_at is not None:
             return False
         now = self._clock(now)
+        if self._start_net(now):
+            return True
         if now < self.deadline:
             return False
         if self.phase == "waiting":
@@ -143,6 +151,10 @@ class FishingGame:
                          "category": category, "description": preset.get("description", "")}
             self._phase("hooked", now, self._duration("fight", 25, 45))
             self._apply_gifts(now)
+        elif self.phase == "net_cast":
+            self._phase("net_caught", now, 8)
+        elif self.phase == "net_caught":
+            self.finish_net(now)
         elif self.phase == "interacting":
             return self.resume(now)
         elif self.phase == "diving":
@@ -180,6 +192,8 @@ class FishingGame:
         if gifts:
             self.last_gift = {"name": (user or self.winner or {}).get("name", "观众"), "count": gifts, "at": now}
         risk = float(self.config.get("escape_chance", .06))
+        if now < self.cheer_until:
+            risk *= .5
         escape = risk * .25 if gifts else 1 - (1 - risk) ** units
         if self.rng.random() < escape:
             self.reason = "物品没挂稳，又掉回水里了" if self.fish.get("category") == "item" else "鱼儿奋力挣脱，脱钩了"
@@ -250,6 +264,9 @@ class FishingGame:
             self._phase("idle", self._clock(now))
         self.interruption = self.dive = None
         self.gift_bank.clear()
+        self.net = self.net_return = self.activity = None
+        self.net_queue.clear()
+        self.cheer_until = 0
 
     def pause(self, paused, now=None):
         now = time.monotonic() if now is None else now
@@ -260,6 +277,14 @@ class FishingGame:
             self.started += delay
             self.phase_started += delay
             self.deadline += delay
+            self.ambience_started += delay
+            self.cheer_until += delay
+            self.action_times = {key: value + delay for key, value in self.action_times.items()}
+            if self.activity:
+                self.activity["at"] += delay
+            if self.net_return:
+                for key in ("started", "deadline", "since"):
+                    self.net_return[key] += delay
             if self.last_pull is not None:
                 self.last_pull += delay
             if self.last_gift:
@@ -296,4 +321,4 @@ class FishingGame:
                 "gift_boost": copy.deepcopy(self.last_gift), "gift_pulls": self.config.get("gift_pulls", 5),
                 "phase_duration": max(0, self.deadline - self.phase_started),
                 "contributors": copy.deepcopy(sorted(self.contributors.values(), key=lambda item: -item["score"])[:10]),
-                "likes_per_pull": self.config.get("likes_per_pull", 10)}
+                "likes_per_pull": self.config.get("likes_per_pull", 10), **self.activity_snapshot(now)}
