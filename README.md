@@ -1,7 +1,7 @@
 # Dy-Ai-Live 1.0.0 · 大肥鱼 / 深蓝 Deepy
-<video src="https://github.com/bucai2417/Dy-Ai-Live/raw/refs/heads/main/lv_0_20261109000611.mp4" controls width="100%">演示</video>
 
 Python + PySide6 桌面工作台，负责直播画面、互动控制、语音与音乐播放。默认直播显示不使用浏览器，独立绘制线程持续生成画面，支持横竖屏和暂停直播。
+[点击观看演示视频](https://github.com/bucai2417/Dy-Ai-Live/raw/refs/heads/main/lv_0_20261109000611.mp4)
 
 **版本：1.0.0 · 许可：PolyForm Noncommercial 1.0.0（源码可见，禁止商业用途）**。许可边界见 [中文说明](docs/非商业使用许可说明.md) 和 [第三方说明](THIRD_PARTY_NOTICES.md)，功能变更见 [更新记录](CHANGELOG.md)。
 
