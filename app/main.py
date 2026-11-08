@@ -172,6 +172,9 @@ async def handle_client_msg(raw: str, ws: WebSocket) -> None:
     if not isinstance(msg, dict):
         return
     cmd = msg.get("cmd")
+    if cmd in ("say", "reaction", "world", "fishing", "idle_preview", "stunt", "costume", "video"):
+        if brain.note_audience():
+            await brain._push_fishing()
 
     if cmd == "renderer_ready":
         hub.playback.register(ws)

@@ -95,6 +95,17 @@ def joint_pose(reaction, now, elapsed):
     elif motion == "drive":
         target = {"upper_left": 32, "upper_right": -32, "forearm_left": -80, "forearm_right": 80,
                   "head": math.sin(age * 1.5) * 5, "tail": 12}
+    elif motion in ("fishing_scan", "fishing_stretch", "fishing_shuffle", "fishing_inspect"):
+        target = {"upper_left": 24, "forearm_left": -82, "upper_right": -28, "forearm_right": -82,
+                  "hand_right": -15, "tail": -48, "fin_left": 25, "fin_right": -18}
+        if motion == "fishing_scan":
+            target.update(upper_left=120, forearm_left=-85, head=math.sin(age * 1.6) * 15, torso=4)
+        elif motion == "fishing_stretch":
+            target.update(upper_left=150, forearm_left=-25, head=-12, torso=-8, tail=-30)
+        elif motion == "fishing_shuffle":
+            target.update(tail=-25 + math.sin(age * 6) * 18, torso=math.sin(age * 6) * 4, head=8)
+        else:
+            target.update(head=18, torso=8, upper_left=35, forearm_left=-98, forearm_right=-65)
     elif motion in ("net_windup", "net_cast", "net_haul", "fishing_feed"):
         stroke = math.sin(age * 4)
         if motion == "net_windup":

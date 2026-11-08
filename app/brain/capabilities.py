@@ -38,6 +38,9 @@ def available_commands():
         result["control"] = {"cancel": "停止骨架动作和整活，场景允许弹幕控制时也停止场景行为；保留音乐", "repeat": "重复最近成功的互动"}
         if Effective.fishing()["enabled"]:
             result["fishing"] = {"start": "去钓鱼，或结束临时互动继续钓鱼", "pull": "咬钩后拉钩；点赞和礼物也能协力",
+                                  "relocate": "等待时换个钓点，收竿提桶沿栈道去下一处，再重抛",
+                                  "spot_cloud": "回云汐钓台，开阔云湖", "spot_reeds": "去芦苇浅湾，小型水族更活跃",
+                                  "spot_reef": "去星礁海岸，海洋水族更活跃",
                                   "feed": "等待时投饵/喂鱼：抛撒鱼饵，剩余等待缩短35%，最低3秒，间隔12秒",
                                   "cheer": "咬钩后加油/护线：十秒内基础脱钩概率减半",
                                  "dive": "放竿、随机跳水、游圈惊鱼、回台重新抛竿", "cancel": "收竿返回原场景"}
@@ -72,10 +75,14 @@ def runtime_context(brain, hub, playlist, now=None, statistics=metrics):
     fishing["catalog"] = {"animals": len(FISH_KINDS), "items": len(ITEM_KINDS), "item_chance": Effective.fishing()["item_chance"]}
     fishing["mode_control"] = {"enabled": Effective.fishing()["chat_switch"], "ranking": Effective.fishing()["rank_control"],
                                "identity": "仅接入源管理员标记、主播配置ID、获授权今日榜单前三的真实用户ID；昵称或自称无效"}
+    config = Effective.fishing()
+    fishing["automatic_rules"] = {key: config[key] for key in ("auto_actions", "quiet_seconds", "auto_relocate",
+                                                               "dry_seconds", "failed_limit", "auto_voice", "auto_invite_seconds")}
     fishing["rules"] = {"enabled": Effective.fishing()["enabled"], "escape_chance": Effective.fishing()["escape_chance"],
                          "net": "常驻且开启撒网时，非咬钩礼物触发完整撒网；总积分=礼物总价值×倍率×随机0.8～1.4，1～5条鱼全部归送礼者。未提供价值按数量估算。撒网期间其它礼物排队；此效果替代普通礼物演出。",
                          "net_enabled": Effective.fishing()["net_enabled"], "net_multiplier": Effective.fishing()["net_multiplier"],
                          "day_night": "自动昼夜变化；day_phase表示当前一天的进度，0是午夜，0.5是正午",
+                         "autonomy": "常驻等待时久无真实弹幕/新增点赞/礼物/关注会观察、伸展、挪位、检查鱼线和邀请。久无成功收获或连续失败在安全等待期换钓点；不会自动拉钩、造点赞、造观众、发放无人鱼获。",
                          "loosen": "只减少进度，不扣既有贡献、不增加积分；可用拉钩或点赞追回",
                         "winner": "拉钩次数 + 实名点赞数 / likes_per_pull + 礼物数量 * gift_pulls；最高者获鱼，同分先参与者优先",
                         "return": "常驻钓台并自动续竿" if brain.dedicated_fishing else "成功、脱钩或超时后回原场景"}
@@ -84,7 +91,7 @@ def runtime_context(brain, hub, playlist, now=None, statistics=metrics):
         primary = "正在为" + gift_show["active"]["user"]["name"] + "表演" + gift_show["active"]["label"]
         active = reaction = None
     elif fishing["active"] and fishing["phase"] != "interacting":
-        primary = fishing["label"]
+        primary = fishing.get("spot_name", "云汐钓台") + "：" + fishing["label"]
         active = None
         reaction = None
     elif active:
@@ -96,6 +103,8 @@ def runtime_context(brain, hub, playlist, now=None, statistics=metrics):
     else:
         primary = "站在场景中休息" if world["enabled"] else "在经典舞台待机"
     return {"paused": brain.paused, "primary_activity": primary, "world": world, "reaction": reaction, "fishing": fishing,
+            "automatic_movement": {"enabled": Effective.idle()["movement_enabled"],
+                                   "active": bool(brain._auto_walk), "quiet_seconds": Effective.idle()["movement_seconds"]},
             "gift_show": gift_show, "dream_talk": Effective.idle()["dream_talk"],
             "gift_interactions": {"enabled": Effective.gift_show()["enabled"],
                                   "effects": {"大啤酒": "热茶回礼或奶蛙短片", "鲜花": "捧花炫耀", "棒棒糖": "巨型棒棒糖",
@@ -120,7 +129,7 @@ def status_line(context):
         return context["primary_activity"] + "，表演完会回到刚才的活动"
     fishing = context.get("fishing") or {}
     if fishing.get("active"):
-        line = "我在云汐钓台，" + fishing["label"]
+        line = "我在" + fishing.get("spot_name", "云汐钓台") + "，" + fishing["label"]
         if fishing["phase"] == "hooked":
             line += f"，收线进度 {fishing['progress']:.0%}，还剩 {fishing['remaining']:.0f} 秒"
         if fishing["phase"] == "caught":

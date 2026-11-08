@@ -32,6 +32,7 @@ from .interact import InteractEngine, pick_expression
 from .llm import LLM, random_topic
 from .utterance import complete_utterance
 from .live_interactions import LiveInteractions
+from .autonomy import Autonomy
 
 log = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ class Speaker:
                 await hub.broadcast({"type": "speech_end", "meta": meta or {}}, remember=False)
 
 
-class Brain(LiveInteractions):
+class Brain(LiveInteractions, Autonomy):
     def __init__(self) -> None:
         self.llm = LLM()
         self.speaker = Speaker()
@@ -140,6 +141,7 @@ class Brain(LiveInteractions):
         from ..fishing import FishingGame
         self.fishing = FishingGame(Effective.fishing())
         self.init_live_interactions()
+        self.init_autonomy()
         self._fishing_scored_round = ""
         self._fishing_scored_net = ""
         self.likes.configure(Effective.like_goal(), Effective.interact()["enabled"])
@@ -181,6 +183,7 @@ class Brain(LiveInteractions):
         if self.paused == paused:
             return
         self.paused = paused
+        self.pause_autonomy(paused)
         self.sync_activity_pauses()
         if paused:
             self._music_was_paused = queue.paused
@@ -308,15 +311,20 @@ class Brain(LiveInteractions):
     async def _publish_event(self, ev: Event) -> bool:
         self.last_activity_at = time.time()
         await hub.broadcast({"type": "event", "event": ev.to_dict()})
+        if ev.kind in ("chat", "gift", "follow") and (ev.kind != "chat" or ev.text.strip()):
+            if self.note_audience():
+                await self._push_fishing()
         if ev.kind == "like":
             self.likes.configure(Effective.like_goal(), Effective.interact()["enabled"])
             previous_total = self.likes.total
             previous_day = self.likes.day
             self.likes.add(ev)
             self._likes_dirty = True
+            delta = max(0, self.likes.total - (previous_total if self.likes.day == previous_day else 0))
+            if delta > 0 and self.note_audience():
+                await self._push_fishing()
             if not self.paused and self.fishing.active and not self.fishing_result_speaking():
                 revision = self.fishing.revision
-                delta = max(0, self.likes.total - (previous_total if self.likes.day == previous_day else 0))
                 user_count = ev.like_count if ev.like_count is not None else ev.gift_count
                 attributed = min(delta, max(0, user_count or 0))
                 user = {"id": ev.user_id, "name": ev.user_name}
@@ -359,7 +367,7 @@ class Brain(LiveInteractions):
             from .intent import Intent, local_intent, video_requested
             intent = local_intent(ev.text)
             if intent.action == "fishing":
-                if intent.motion in ("start", "cancel", "dive", "enter_dedicated", "exit_dedicated"):
+                if intent.motion in ("start", "cancel", "dive", "relocate", "spot_cloud", "spot_reeds", "spot_reef", "enter_dedicated", "exit_dedicated"):
                     self._control_generation += 1
                 await self._execute_intent(ev, intent, quick=True)
                 ev.answered = True
@@ -432,6 +440,8 @@ class Brain(LiveInteractions):
     async def fishing_command(self, operation, ev=None, manual=False):
         if self.paused:
             raise ValueError("直播已暂停，请先恢复直播")
+        if manual:
+            self.note_audience()
         if operation in ("enter_dedicated", "exit_dedicated"):
             return await self.set_fishing_mode(operation == "enter_dedicated", ev, manual)
         if self.gift_show.active:
@@ -462,6 +472,9 @@ class Brain(LiveInteractions):
                 user = {"id": ev.user_id, "name": ev.user_name} if ev and not manual else None
                 self.fishing.pull(user=user, event_id=ev.id if ev else "")
                 label = "已协力收线"
+            elif operation in ("relocate", "spot_cloud", "spot_reeds", "spot_reef"):
+                self.fishing.relocate("next" if operation == "relocate" else operation[5:])
+                label = self.fishing.snapshot()["label"]
             elif operation in ("loosen", "feed", "cheer"):
                 user = {"id": ev.user_id, "name": ev.user_name} if ev and not manual else None
                 self.fishing.fish_action(operation, user, ev.id if ev else "")
@@ -1215,7 +1228,11 @@ class Brain(LiveInteractions):
     async def _idle_action_loop(self):
         while True:
             await asyncio.sleep(1)
-            await self.idle_action()
+            try:
+                if not await self.autonomous_tick():
+                    await self.idle_action()
+            except Exception:
+                log.exception("自动动作调度失败，下一轮继续尝试")
 
     async def _idle_once(self):
         if not self._ambient_available():

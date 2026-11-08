@@ -340,6 +340,12 @@ class StudioWindow(QMainWindow):
             button.clicked.connect(lambda checked=False, operation=action: self.client.send({"cmd": "fishing", "action": operation}))
             action_row.addWidget(button)
         layout.addLayout(action_row)
+        spot_row = QHBoxLayout()
+        for label, action in (("换个钓点", "relocate"), ("芦苇浅湾", "spot_reeds"), ("星礁海岸", "spot_reef"), ("云汐钓台", "spot_cloud")):
+            button = QPushButton(label)
+            button.clicked.connect(lambda checked=False, operation=action: self.client.send({"cmd": "fishing", "action": operation}))
+            spot_row.addWidget(button)
+        layout.addLayout(spot_row)
         fishing_help = QLabel("常驻退出：管理员 / 获授权榜单前三发送“退出常驻钓鱼模式”；主播可直接点击退出常驻钓台。")
         fishing_help.setWordWrap(True)
         layout.addWidget(fishing_help)

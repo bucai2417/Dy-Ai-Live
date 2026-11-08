@@ -64,6 +64,8 @@ class Preferences(QDialog):
         self._field("idle", "invite_seconds", "玩法邀请最短间隔（秒）", (30, 3600, 10))
         self._field("idle", "actions_enabled", "无人互动时自动做动作", "bool")
         self._field("idle", "action_seconds", "冷场动作间隔（秒）", (5, 3600, 1))
+        self._field("idle", "movement_enabled", "普通场景久无互动时自动散步", "bool")
+        self._field("idle", "movement_seconds", "自动散步前安静多久（秒）", (30, 3600, 5))
         self._field("idle", "action_mode", "动作选择", [("依次轮换", "cycle"), ("随机不连续重复", "random")])
         self._field("idle", "speech_during_music", "音乐播放期间也允许冷场聊天", "bool")
         self.idle_actions = {}
@@ -81,7 +83,8 @@ class Preferences(QDialog):
         self.form.addRow(preview)
         note = QLabel("收到观众互动后重新计时；播报、待回复消息、点赞整活和暂停期间不会自动插入。\n"
                       "动作与冷场聊天独立开关；聊天间隔在「语音与节奏」设置，话题和邀请台词在「内置话术」修改。\n"
-                      "玩法邀请按当前开关轮换推荐钓鱼、场景、换装等；钓鱼和动作进行中不插话，不会自行开局。")
+                      "普通场景自动散步约24秒；观众互动会让路，睡觉、驾驶或主动场景行为不被打断。\n"
+                      "钓台的独立自动动作、换点和邀请请在‘钓鱼玩法’设置；这些功能不会自行进入钓鱼模式。")
         note.setWordWrap(True)
         self.form.addRow(note)
         self._tab("音乐与画面")
@@ -156,6 +159,13 @@ class Preferences(QDialog):
         self._field("fishing", "net_multiplier", "每礼物价值单位对应图鉴分", (1, 1000, 1))
         self._field("fishing", "loosen_enabled", "允许弹幕松线减少进度", "bool")
         self._field("fishing", "loosen_amount", "松线减少进度（0.08 = 8个百分点）", (.01, .25, .01))
+        self._field("fishing", "auto_actions", "常驻等待时自动观察 / 伸展 / 挪位 / 检查鱼线", "bool")
+        self._field("fishing", "quiet_seconds", "自动小动作前安静多久（秒）", (10, 600, 5))
+        self._field("fishing", "auto_relocate", "久无收获或连续空竿自动换钓点", "bool")
+        self._field("fishing", "dry_seconds", "多久没有成功收获就换点（秒）", (60, 3600, 10))
+        self._field("fishing", "failed_limit", "连续多少竿失败后换点", (1, 20, 1))
+        self._field("fishing", "auto_voice", "常驻冷场主动介绍当前钓点与玩法", "bool")
+        self._field("fishing", "auto_invite_seconds", "冷场邀请间隔（秒）", (30, 900, 5))
         note = QLabel("发“钓鱼 / 去钓鱼”开始一局。每竿独立抽取咬钩等待和溜鱼时限；提前拉满即可捕获。\n"
                       "本轮贡献 = 拉钩次数 + 实名点赞数 ÷ 每拉所需点赞数 + 礼物数量 × 礼物力度；最高者获得鱼获，同分先参与优先。\n"
                       "仅全场汇总且无法识别用户的点赞计入匿名合力，不会伪造名字。今日累计鱼获榜同日重启保留。\n"
@@ -167,6 +177,9 @@ class Preferences(QDialog):
                        "管理员或所选今日榜单前三可发‘切换钓鱼界面 / 进入钓鱼界面 / 退出钓鱼界面’。重复进入不会退出。\n"
                        "权限按接入源的管理员标记或用户ID判断；填写ID而非昵称。无身份数据的弹幕不能取得榜单权限。\n"
                        "今日水族和奇物按实际咬钩记录（含脱钩），在水面底部轮播，重启保留。过滤器等是可收藏计分的趣味道具。\n"
+                       "久无互动的小动作不延后咬钩；咬钩、礼物、收获和跳水时不会自动换点。\n"
+                       "无收获时间或失败竿数任一达标，等本竿结束后转场约10秒，到新钓点重抛。礼物排队保留。\n"
+                       "可发换个钓点 / 去芦苇浅湾 / 去星礁海岸 / 回云汐钓台；AI知道当前钓点和自动行动原因。\n"
                        "价值为玩法积分，不可兑换；默认10分钟昼夜循环，亦可跟随电脑时间。暂停直播会冻结动作与循环。")
         note.setWordWrap(True)
         self.form.addRow(note)

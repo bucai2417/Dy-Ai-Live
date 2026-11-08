@@ -184,6 +184,25 @@ class LiveInteractions:
                 return None
             game = self.fishing.snapshot()
             identifier, phase = game["round_id"], game["phase"]
+            if phase == "relocating" and game.get("relocation"):
+                from ..fishing_autonomy import SPOTS
+                moving = game["relocation"]
+                key = (moving["id"], phase)
+                if self._fishing_voice_key == key:
+                    return None
+                text = render_line("fishing_relocate", spot=SPOTS[moving["to"]]["name"], reason=moving["reason"])
+                guard = lambda: (not self.paused and not self.gift_show.active and Effective.fishing()["voice"]
+                                 and bool(self.fishing.relocation) and self.fishing.relocation["id"] == moving["id"])
+                return text, guard, ("fishing", key)
+            notice = game.get("auto_notice")
+            if (phase == "waiting" and notice and time.monotonic() - notice["at"] <= 20 and Effective.fishing()["auto_voice"]
+                    and self._last_fishing_auto_voice != notice["id"]):
+                from .scheduler import queue
+                if not queue.playing or Effective.idle()["speech_during_music"]:
+                    guard = lambda: (not self.paused and not self.gift_show.active and Effective.fishing()["voice"]
+                                     and Effective.fishing()["auto_voice"] and self.fishing.phase == "waiting"
+                                     and bool(self.fishing.auto_notice) and self.fishing.auto_notice["id"] == notice["id"])
+                    return render_line("fishing_auto_invite", spot=notice["spot"]), guard, ("fishing_auto", notice["id"])
             if phase in ("net_cast", "net_caught"):
                 haul = game["net"]
                 key = (haul["id"], phase)
@@ -258,6 +277,8 @@ class LiveInteractions:
             self._fishing_voice_key = token
         elif kind == "reminder":
             self._fishing_reminded = token
+        elif kind == "fishing_auto":
+            self._last_fishing_auto_voice = token
         else:
             self._last_dream_at = token
         self._live_voice_guard = guard

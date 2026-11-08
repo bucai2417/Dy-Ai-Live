@@ -204,6 +204,13 @@ DEFAULTS: dict[str, Any] = {
         "net_multiplier": 20,
         "loosen_enabled": True,
         "loosen_amount": 0.08,
+        "auto_actions": True,
+        "quiet_seconds": 25,
+        "auto_relocate": True,
+        "dry_seconds": 180,
+        "failed_limit": 3,
+        "auto_voice": True,
+        "auto_invite_seconds": 90,
     },
     "gift_show": {"enabled": True, "voice": True, "beer_video": True},
     "bgm": {"enabled": False, "path": "", "volume": 0.2, "duck": 0.25},
@@ -240,6 +247,8 @@ DEFAULTS: dict[str, Any] = {
         "action_mode": "cycle",
         "actions": ["stretch", "peek", "float", "heart", "sleepy"],
         "speech_during_music": False,
+        "movement_enabled": True,
+        "movement_seconds": 90,
     },
     # 互动：让观众的动作真的能改变画面，而不是只有嘴在动
     "interact": {
@@ -405,6 +414,11 @@ def _validate_config(data: dict, defaults: dict = DEFAULTS, path: str = "") -> N
         ("fishing", "likes_per_pull", 1, 10000),
         ("fishing", "day_cycle", 120, 7200),
         ("fishing", "net_multiplier", 1, 1000),
+        ("fishing", "quiet_seconds", 10, 600),
+        ("fishing", "dry_seconds", 60, 3600),
+        ("fishing", "failed_limit", 1, 20),
+        ("fishing", "auto_invite_seconds", 30, 900),
+        ("idle", "movement_seconds", 30, 3600),
         ("stage", "subtitle_size", 14, 26),
     ):
         value = data.get(section, {}).get(key)
@@ -743,7 +757,14 @@ class Effective:
                 "net_enabled": bool(cfg.get("net_enabled", True)),
                 "net_multiplier": int(_clamp(cfg.get("net_multiplier", 20), 1, 1000, 20)),
                 "loosen_enabled": bool(cfg.get("loosen_enabled", True)),
-                "loosen_amount": _clamp(cfg.get("loosen_amount", .08), .01, .25, .08)}
+                "loosen_amount": _clamp(cfg.get("loosen_amount", .08), .01, .25, .08),
+                "auto_actions": bool(cfg.get("auto_actions", True)),
+                "quiet_seconds": int(_clamp(cfg.get("quiet_seconds", 25), 10, 600, 25)),
+                "auto_relocate": bool(cfg.get("auto_relocate", True)),
+                "dry_seconds": int(_clamp(cfg.get("dry_seconds", 180), 60, 3600, 180)),
+                "failed_limit": int(_clamp(cfg.get("failed_limit", 3), 1, 20, 3)),
+                "auto_voice": bool(cfg.get("auto_voice", True)),
+                "auto_invite_seconds": int(_clamp(cfg.get("auto_invite_seconds", 90), 30, 900, 90))}
 
     @staticmethod
     def gift_show() -> dict:
