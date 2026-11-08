@@ -3,6 +3,10 @@
 Python + PySide6 桌面工作台，负责直播画面、互动控制、语音与音乐播放。默认直播显示不使用浏览器，独立绘制线程持续生成画面，支持横竖屏和暂停直播。
 [点击观看演示视频](https://github.com/bucai2417/Dy-Ai-Live/raw/refs/heads/main/lv_0_20261109000611.mp4)
 
+<video src="https://github.com/bucai2417/Dy-Ai-Live/raw/refs/heads/main/lv_0_20261109000611.mp4" controls width="100%"></video>
+
+[https://github.com/user-attachments/assets/你的视频ID](https://github.com/bucai2417/Dy-Ai-Live/raw/refs/heads/main/lv_0_20261109000611.mp4)
+
 **版本：1.0.0 · 许可：PolyForm Noncommercial 1.0.0（源码可见，禁止商业用途）**。许可边界见 [中文说明](docs/非商业使用许可说明.md) 和 [第三方说明](THIRD_PARTY_NOTICES.md)，功能变更见 [更新记录](CHANGELOG.md)。
 
 v1.0.0 Release 提供 Python 源码。main 分支已配置 Windows 自动构建，可在 GitHub Actions 下载免安装 EXE 目录包；未来版本标签通过检查后会自动上传对应 Release，详见 [Windows 自动构建](docs/Windows自动构建.md)。
