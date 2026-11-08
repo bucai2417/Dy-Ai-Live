@@ -1,5 +1,7 @@
 # Windows 自动构建与便携版
 
+完整操作步骤见仓库的 [用户使用教程](https://github.com/bucai2417/Dy-Ai-Live/blob/main/docs/用户使用教程.md)。新构建的 Windows 包将同一份教程保存为「使用说明.md」，本文另存为「Windows自动构建.md」，便于离线查阅。
+
 ## 使用构建好的程序
 
 在 GitHub 的 Actions → Windows build → 成功的运行中，下载 Dy-Ai-Live-版本+提交号-windows-x64 构建产物，解压其中的 ZIP。正式版本标签构建成功后，也会将 ZIP 和 SHA256 文件上传到对应 Release。

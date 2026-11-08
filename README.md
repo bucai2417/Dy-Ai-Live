@@ -6,6 +6,8 @@ Python + PySide6 桌面工作台，负责直播画面、互动控制、语音与
 
 v1.0.0 Release 提供 Python 源码。main 分支已配置 Windows 自动构建，可在 GitHub Actions 下载免安装 EXE 目录包；未来版本标签通过检查后会自动上传对应 Release，详见 [Windows 自动构建](docs/Windows自动构建.md)。
 
+**第一次使用请阅读 [详细用户教程](docs/用户使用教程.md)**：从 EXE 下载、源码启动、AI / 语音配置，到弹幕接入、OBS 画面与声音、钓鱼和礼物玩法、命令速查、备份升级及故障排查。新构建的 Windows 包也会附带同一份「使用说明.md」。
+
 ## 启动
 
 Windows，Python 3.10 或更新版本。首次使用在项目根目录执行：

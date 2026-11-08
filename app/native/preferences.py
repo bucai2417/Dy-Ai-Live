@@ -34,7 +34,7 @@ class Preferences(QDialog):
                            ("price_out", "输出价格（元 / 百万 Token）")):
             field = self._field("llm", key, label, (0, 1000000, 0.1))
             field.setDecimals(4)
-        note = QLabel("输入与输出分别计价。按当前单价估算本次启动的今日用量；重启归零。\n"
+        note = QLabel("输入与输出分别计价。按当前单价估算今日用量；同日重启恢复，跨天重新累计。\n"
                       "包含意图识别与回复；接口未返回完整用量时标注估算，费用仅供参考。")
         note.setWordWrap(True)
         self.form.addRow(note)

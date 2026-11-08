@@ -96,7 +96,8 @@ def main():
     application = build_dir / "dist/Dy-Ai-Live"
     for filename in ("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", ".env.example"):
         shutil.copyfile(ROOT / filename, application / filename)
-    shutil.copyfile(ROOT / "docs/Windows自动构建.md", application / "使用说明.md")
+    shutil.copyfile(ROOT / "docs/用户使用教程.md", application / "使用说明.md")
+    shutil.copyfile(ROOT / "docs/Windows自动构建.md", application / "Windows自动构建.md")
     for filename in ("README.md", "package.json", "sign_server.mjs"):
         target = application / "tools/douyin_sig" / filename
         target.parent.mkdir(parents=True, exist_ok=True)
