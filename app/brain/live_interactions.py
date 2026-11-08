@@ -63,10 +63,11 @@ class LiveInteractions:
 
     def sync_activity_pauses(self):
         self.gift_show.pause(self.paused)
-        self.fishing.pause(self.paused or bool(self.gift_show.active))
+        self.games.pause(self.paused or bool(self.gift_show.active))
+        self.fishing.pause(self.paused or bool(self.gift_show.active) or self.games.active)
         fishing_busy = self.fishing.active and self.fishing.phase != "interacting"
-        self.world.pause(self.paused or fishing_busy or bool(self.gift_show.active))
-        self.likes.pause(self.paused or fishing_busy or bool(self.gift_show.active))
+        self.world.pause(self.paused or fishing_busy or bool(self.gift_show.active) or self.games.active)
+        self.likes.pause(self.paused or fishing_busy or bool(self.gift_show.active) or self.games.active)
 
     async def interrupt_fishing(self, label, duration):
         if not self.fishing.active:
@@ -95,7 +96,7 @@ class LiveInteractions:
         await self._push_likes()
 
     async def ensure_dedicated_fishing(self):
-        if self.dedicated_fishing and not self.fishing.active and not self.paused and not self.gift_show.active:
+        if self.dedicated_fishing and not self.fishing.active and not self.paused and not self.gift_show.active and not self.games.active:
             self.fishing.config = Effective.fishing()
             self.fishing.start(self.world.describe()["scene_label"])
             self.sync_activity_pauses()
@@ -105,6 +106,8 @@ class LiveInteractions:
         return False
 
     async def configure_live_features(self, previous_fishing=None):
+        if self.games.active and (not Effective.games()["enabled"] or not Effective.interact()["enabled"]):
+            await self.close_games()
         config = Effective.fishing()
         self.fishing.config = config
         if (not config["enabled"] or not Effective.interact()["enabled"]
@@ -141,6 +144,7 @@ class LiveInteractions:
 
     async def sync_gift_show(self):
         self.sync_activity_pauses()
+        await self.push_games()
         if self.gift_show.active and self.gift_show.active["effect"] == "sunglasses":
             from ..wardrobe import wear
             try:
@@ -188,6 +192,8 @@ class LiveInteractions:
                                  and bool(self.gift_show.active) and self.gift_show.active["id"] == identifier)
                 return text, guard, ("gift", identifier)
             return None
+        if self.games.active:
+            return self.game_voice_candidate()
         if self.fishing.active:
             if not Effective.fishing()["voice"] or self.fishing.paused_at is not None:
                 return None
@@ -294,6 +300,8 @@ class LiveInteractions:
             self._last_fishing_auto_voice = token
         elif kind == "world_auto":
             self._auto_voice_id = token
+        elif kind == "game":
+            self._game_voice_key = token
         else:
             self._last_dream_at = token
         self._live_voice_guard = guard

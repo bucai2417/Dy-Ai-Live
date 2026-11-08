@@ -337,6 +337,7 @@ def test_idle_actions_rotate_and_defer_to_viewer_activity(isolated_runtime, monk
 
 
 def test_idle_speech_uses_full_editable_lines_and_respects_music(isolated_runtime, monkeypatch):
+    store._data["idle"]["ai_chat"] = False
     store._data["templates"].update(enabled=True, idle=True, prefer_llm=False)
     store._data["idle"]["gameplay_invites"] = False
     expected = "我想邀请潜水的朋友一起聊聊天，先说说今天发生的开心事，完整的一句话会说到最后。"
@@ -367,6 +368,7 @@ def test_idle_speech_uses_full_editable_lines_and_respects_music(isolated_runtim
 
 
 def test_arriving_chat_cancels_pending_idle_utterance(isolated_runtime, monkeypatch):
+    store._data["idle"]["ai_chat"] = False
     store._data["templates"].update(enabled=True, idle=True, prefer_llm=True)
     brain = quiet_brain(isolated_runtime)
     monkeypatch.setattr(LLM, "active", property(lambda self: True))

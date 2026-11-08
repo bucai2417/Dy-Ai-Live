@@ -146,6 +146,7 @@ async def ws_endpoint(ws: WebSocket):
             "performance": hub.performance.snapshot(),
             "fishing": app.state.brain.fishing.snapshot(),
             "giftShow": app.state.brain.gift_show.snapshot(),
+            "game": app.state.brain.games.snapshot(),
         })
         await hub.broadcast({"type": "online", "count": len(hub.clients)}, remember=False)
         while True:
@@ -172,11 +173,20 @@ async def handle_client_msg(raw: str, ws: WebSocket) -> None:
     if not isinstance(msg, dict):
         return
     cmd = msg.get("cmd")
-    if cmd in ("say", "reaction", "world", "fishing", "idle_preview", "stunt", "costume", "video"):
+    if cmd in ("say", "reaction", "world", "fishing", "idle_preview", "stunt", "costume", "video", "game"):
+        await brain.interrupt_companion()
         if brain.note_audience():
             await brain._push_fishing()
 
-    if cmd == "renderer_ready":
+    if brain.games.active and cmd in ("reaction", "world", "fishing", "idle_preview", "stunt", "costume", "video"):
+        await ws.send_json({"type": "error", "error": "请先在小游戏面板点击结束，再切换场景或人物动作"})
+        return
+    if cmd == "game":
+        try:
+            await brain.game_command(msg.get("action"), manual=True)
+        except ValueError as error:
+            await ws.send_json({"type": "error", "error": str(error)})
+    elif cmd == "renderer_ready":
         hub.playback.register(ws)
     elif cmd == "voice_finished":
         identifier = msg.get("id")
@@ -356,6 +366,7 @@ def _public_config() -> dict:
         "world": Effective.world(),
         "fishing": {key: value for key, value in Effective.fishing().items() if key != "admin_ids"},
         "giftShow": Effective.gift_show(),
+        "games": Effective.games(),
         "bgm": Effective.bgm(),
         "ticker": Effective.ticker(),
         "likeGoal": Effective.like_goal(),
@@ -568,6 +579,8 @@ async def api_session_boot(keep: bool = False):
         return JSONResponse({"ok": True, "kept": True})
 
     await app.state.brain.stop_speech()
+    await app.state.brain.close_games()
+    app.state.brain.topic_memory.clear()
     app.state.brain._pending_replies.clear()
     app.state.brain.pending_enter.clear()
     app.state.brain.pending_enter_at = 0.0

@@ -33,6 +33,8 @@ from .llm import LLM, random_topic
 from .utterance import complete_utterance
 from .live_interactions import LiveInteractions
 from .autonomy import Autonomy
+from .companion import AICompanion
+from .games import Games
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +112,7 @@ class Speaker:
                 await hub.broadcast({"type": "speech_end", "meta": meta or {}}, remember=False)
 
 
-class Brain(LiveInteractions, Autonomy):
+class Brain(LiveInteractions, Autonomy, AICompanion, Games):
     def __init__(self) -> None:
         self.llm = LLM()
         self.speaker = Speaker()
@@ -142,6 +144,8 @@ class Brain(LiveInteractions, Autonomy):
         self.fishing = FishingGame(Effective.fishing())
         self.init_live_interactions()
         self.init_autonomy()
+        self.init_games()
+        self.init_companion()
         self._fishing_scored_round = ""
         self._fishing_scored_net = ""
         self.likes.configure(Effective.like_goal(), Effective.interact()["enabled"])
@@ -214,9 +218,11 @@ class Brain(LiveInteractions, Autonomy):
         await self._push_likes()
         await self._push_fishing()
         await self._push_gift_show()
+        await self.push_games()
 
     async def stop_speech(self) -> None:
         self._speech_generation += 1
+        await self.interrupt_companion()
         await self.stop_live_voice()
         self.speaker.interrupt()
         task = self._response_task
@@ -302,6 +308,7 @@ class Brain(LiveInteractions, Autonomy):
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
             await self.stop_live_voice()
+            await self.close_games()
 
     async def handle(self, ev: Event) -> None:
         handled = await self._publish_event(ev)
@@ -314,6 +321,7 @@ class Brain(LiveInteractions, Autonomy):
         self.last_activity_at = time.time()
         await hub.broadcast({"type": "event", "event": ev.to_dict()})
         if ev.kind in ("chat", "gift", "follow") and (ev.kind != "chat" or ev.text.strip()):
+            await self.interrupt_companion()
             if self.note_audience():
                 await self._push_fishing()
         if ev.kind == "like":
@@ -323,6 +331,8 @@ class Brain(LiveInteractions, Autonomy):
             self.likes.add(ev)
             self._likes_dirty = True
             delta = max(0, self.likes.total - (previous_total if self.likes.day == previous_day else 0))
+            if delta > 0:
+                await self.interrupt_companion()
             if delta > 0 and self.note_audience():
                 await self._push_fishing()
             if not self.paused and self.fishing.active and not self.fishing_result_speaking():
@@ -340,7 +350,7 @@ class Brain(LiveInteractions, Autonomy):
         # 统计先记：礼物榜/token 消耗要包含被过滤掉的事件，否则数据会少
         if ev.kind == "gift":
             net_gift = False
-            if not self.paused and Effective.interact()["enabled"]:
+            if not self.paused and not self.games.active and Effective.interact()["enabled"]:
                 donor = {"id": ev.user_id, "name": ev.user_name, "avatar": ev.avatar,
                          "tribute": metrics.gift_board.tribute(ev.to_dict())}
                 net_value = 0 if ev.gift_value_estimated else ev.gift_value
@@ -368,6 +378,15 @@ class Brain(LiveInteractions, Autonomy):
         if ev.kind == "chat" and self._allow(ev) and Effective.interact()["enabled"]:
             from .intent import Intent, local_intent, video_requested
             intent = local_intent(ev.text)
+            if intent.action == "game":
+                await self._execute_intent(ev, intent, quick=True)
+                ev.answered = True
+                await hub.broadcast({"type": "answered", "id": ev.id})
+                return True
+            if (intent.action == "chat" or self.game_answer_matches(ev.text)) and await self.game_chat(ev):
+                ev.answered = True
+                await hub.broadcast({"type": "answered", "id": ev.id})
+                return True
             if intent.action == "fishing":
                 if intent.motion in ("start", "cancel", "dive", "relocate", "spot_cloud", "spot_reeds", "spot_reef", "enter_dedicated", "exit_dedicated"):
                     self._control_generation += 1
@@ -398,9 +417,10 @@ class Brain(LiveInteractions, Autonomy):
             await asyncio.sleep(0.25)
             if self.tick_gift_show():
                 await self.sync_gift_show()
+            await self.games_tick()
             await self.ensure_dedicated_fishing()
             if (self.dedicated_fishing and self.fishing.phase in ("waiting", "hooked")
-                    and self.likes.pending and not self.gift_show.active and not self.paused):
+                    and self.likes.pending and not self.gift_show.active and not self.games.active and not self.paused):
                 from ..like_goal import STUNTS
                 duration = sum(STUNTS[item["motion"]]["duration"] + self.likes.cooldown for item in self.likes.pending)
                 await self.interrupt_fishing("点赞达标整活", duration + 1)
@@ -686,6 +706,17 @@ class Brain(LiveInteractions, Autonomy):
     async def _execute_intent(self, ev, intent, quick=False):
         from .intent import COSTUMES, MOTIONS
         from .capabilities import help_line, status_line
+
+        if intent.action == "game":
+            try:
+                label = await self.game_command(intent.motion, ev)
+            except ValueError as error:
+                return await self._intent_error(intent, ev, str(error), True)
+            self._remember_interaction(intent, label)
+            await hub.broadcast({"type": "subtitle", "text": label}, remember=False)
+            return True
+        if self.games.active and intent.action in ("world", "motion", "costume", "video", "control", "fishing"):
+            return await self._intent_error(intent, ev, "小游戏正在进行，开局者或管理员可发‘结束小游戏’后切换玩法", True)
 
         if self.gift_show.active and intent.action in ("world", "motion", "costume", "video", "control"):
             return await self._intent_error(intent, ev, "正在播放专属礼物演出，表演结束后再来互动吧", True)
@@ -1189,7 +1220,7 @@ class Brain(LiveInteractions, Autonomy):
     def _ambient_available(self):
         world = self.world.describe()
         return not (self.paused or self.speaker.busy or self._response_task or self._pending_replies
-                    or self.pending_enter or self.likes.active or self.fishing.active or self.gift_show.active
+                    or self.pending_enter or self.likes.active or self.fishing.active or self.gift_show.active or self.games.active
                     or self._live_voice_task or hub.performance.snapshot()
                     or (world["enabled"] and (world["moving"] or world["activity"] != "idle")))
 
@@ -1237,6 +1268,8 @@ class Brain(LiveInteractions, Autonomy):
                 log.exception("自动动作调度失败，下一轮继续尝试")
 
     async def _idle_once(self):
+        if Effective.idle()["ai_chat"]:
+            return await self.companion_once()
         if not self._ambient_available():
             return False
         templates = Effective.templates()

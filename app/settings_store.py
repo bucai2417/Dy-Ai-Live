@@ -238,6 +238,9 @@ DEFAULTS: dict[str, Any] = {
         "prefer_llm": True,
     },
     "idle": {
+        "ai_chat": True,
+        "chat_chars": 120,
+        "topic_preferences": "",
         "dream_talk": True,
         "dream_seconds": 45,
         "actions_enabled": True,
@@ -254,6 +257,16 @@ DEFAULTS: dict[str, Any] = {
         "scene_switching": True,
         "scene_switch_seconds": 300,
         "movement_voice": True,
+    },
+    "games": {
+        "enabled": True,
+        "chat_control": True,
+        "rounds": 5,
+        "round_seconds": 60,
+        "draw_seconds": 12,
+        "voice": True,
+        "auto_start": False,
+        "auto_seconds": 300,
     },
     # 互动：让观众的动作真的能改变画面，而不是只有嘴在动
     "interact": {
@@ -426,6 +439,11 @@ def _validate_config(data: dict, defaults: dict = DEFAULTS, path: str = "") -> N
         ("idle", "movement_seconds", 30, 3600),
         ("idle", "interaction_seconds", 8, 60),
         ("idle", "scene_switch_seconds", 120, 3600),
+        ("idle", "chat_chars", 40, 300),
+        ("games", "rounds", 1, 10),
+        ("games", "round_seconds", 30, 180),
+        ("games", "draw_seconds", 5, 30),
+        ("games", "auto_seconds", 120, 3600),
         ("stage", "subtitle_size", 14, 26),
     ):
         value = data.get(section, {}).get(key)
@@ -473,6 +491,8 @@ def _validate_config(data: dict, defaults: dict = DEFAULTS, path: str = "") -> N
     if "avatar_mode" in stage and stage["avatar_mode"] not in ("layered", "image"):
         raise ValueError("人物模式应为分层骨架或原始立绘")
     idle = data.get("idle", {})
+    if len(idle.get("topic_preferences", "")) > 1000:
+        raise ValueError("聊天话题偏好最多1000字")
     if "dream_seconds" in idle and not 15 <= idle["dream_seconds"] <= 3600:
         raise ValueError("梦话间隔须为 15～3600 秒")
     for key in ("volume", "duck"):
@@ -602,6 +622,10 @@ class Effective:
     @staticmethod
     def idle() -> dict:
         return _deep_merge(DEFAULTS["idle"], store.section("idle"))
+
+    @staticmethod
+    def games() -> dict:
+        return _deep_merge(DEFAULTS["games"], store.section("games"))
 
     @staticmethod
     def llm() -> dict:

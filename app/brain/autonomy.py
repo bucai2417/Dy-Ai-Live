@@ -71,7 +71,7 @@ class Autonomy:
         from .scheduler import queue
         notice = self._auto_notice
         if (not notice or notice["id"] == self._auto_voice_id or self.paused or self.fishing.active
-                or self.gift_show.active or not Effective.idle()["movement_voice"]
+                or self.gift_show.active or self.games.active or not Effective.idle()["movement_voice"]
                 or not Effective.idle()["movement_enabled"] or not Effective.interact()["enabled"]
                 or not self._auto_walk or self.world.revision != notice["revision"]
                 or self.world.paused_at is not None or self._pending_replies
@@ -140,7 +140,7 @@ class Autonomy:
 
     async def autonomous_tick(self, now=None):
         now = time.monotonic() if now is None else now
-        if self.paused:
+        if self.paused or self.games.active:
             return False
         config = Effective.idle()
         if self.world.scene != self._auto_scene:

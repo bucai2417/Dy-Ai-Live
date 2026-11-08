@@ -121,6 +121,7 @@ def test_stats_reconnect_and_session_reset_keep_rank(isolated_runtime):
 
 
 def test_idle_invites_use_editable_lines_rotate_and_obey_cooldown(isolated_runtime, monkeypatch):
+    store._data["idle"]["ai_chat"] = False
     store._data["templates"].update(enabled=True, idle=True, prefer_llm=False)
     store._data["lines"]["idle_fishing"] = ["有点想去钓鱼了，你可以发钓鱼。咬钩后一起拉钩！"]
     brain = quiet_brain(isolated_runtime)
@@ -147,6 +148,7 @@ def test_idle_invites_use_editable_lines_rotate_and_obey_cooldown(isolated_runti
 
 
 def test_invites_skip_disabled_features_and_cancel_if_settings_change(isolated_runtime, monkeypatch):
+    store._data["idle"]["ai_chat"] = False
     store._data["fishing"]["enabled"] = False
     store._data["templates"].update(enabled=True, idle=True, prefer_llm=True)
     brain = quiet_brain(isolated_runtime)
@@ -166,6 +168,7 @@ def test_invites_skip_disabled_features_and_cancel_if_settings_change(isolated_r
 
 
 def test_online_invitation_receives_real_rules_and_rank(isolated_runtime, monkeypatch):
+    store._data["idle"]["ai_chat"] = False
     store._data["templates"].update(enabled=True, idle=True, prefer_llm=True)
     brain = quiet_brain(isolated_runtime)
     scheduler.metrics.add_catch("actual", fish(450), {"name": "今天的榜首"})

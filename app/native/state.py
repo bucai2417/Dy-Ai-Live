@@ -50,6 +50,8 @@ class StageState:
         self.fishing_at = 0.0
         self.gift_show = {}
         self.gift_show_at = 0.0
+        self.game = {}
+        self.game_at = 0.0
 
     def apply(self, message: dict):
         kind = message.get("type")
@@ -76,6 +78,8 @@ class StageState:
                 self.fishing_at = now
                 self.gift_show = message.get("giftShow") or {}
                 self.gift_show_at = now
+                self.game = message.get("game") or {}
+                self.game_at = now
                 self.reaction = {}
                 self.reaction_until = 0
 
@@ -116,6 +120,9 @@ class StageState:
             elif kind == "gift_show":
                 self.gift_show = message.get("show") or {}
                 self.gift_show_at = now
+            elif kind == "game":
+                self.game = message.get("game") or {}
+                self.game_at = now
             elif kind == "world":
                 self.world = message.get("world") or {}
                 self.world_at = now
@@ -145,6 +152,11 @@ class StageState:
                 self.subtitle_at = now
                 self.subtitle_until = now + max(8, len(self.subtitle) * .18)
             elif kind == "state":
+                if self.game.get("active") and not self.paused and not self.game.get("paused"):
+                    delta = max(0, now - self.game_at)
+                    self.game["elapsed"] = self.game.get("elapsed", 0) + delta
+                    self.game["remaining"] = max(0, self.game.get("remaining", 0) - delta)
+                self.game_at = now
                 if (self.gift_show.get("active") and not self.paused and not self.gift_show.get("paused")
                         and not self.gift_show.get("holding")):
                     self.gift_show["elapsed"] = self.gift_show.get("elapsed", 0) + max(0, now - self.gift_show_at)
@@ -175,8 +187,9 @@ class StageState:
                     self.paused_at = 0.0
                 self.paused = paused
                 self.gift_show["paused"] = paused
-                self.fishing["paused"] = paused or bool(self.gift_show.get("active"))
-                activity_paused = paused or bool(self.gift_show.get("active")) or (bool(self.fishing.get("active")) and self.fishing.get("phase") != "interacting")
+                self.game["paused"] = paused or bool(self.gift_show.get("active"))
+                self.fishing["paused"] = paused or bool(self.gift_show.get("active")) or bool(self.game.get("active"))
+                activity_paused = paused or bool(self.gift_show.get("active")) or bool(self.game.get("active")) or (bool(self.fishing.get("active")) and self.fishing.get("phase") != "interacting")
                 self.world["paused"] = activity_paused
                 self.like_goal["paused"] = activity_paused
                 self.mouth = 0
@@ -208,6 +221,8 @@ class StageState:
             elif kind == "reset":
                 self.gift_show = {}
                 self.gift_show_at = now
+                self.game = {}
+                self.game_at = now
                 self.fishing = {}
                 self.fishing_at = now
                 self.like_goal = {}
@@ -337,6 +352,7 @@ class StageState:
                 "world": self.world, "world_at": self.world_at,
                 "fishing": self.fishing, "fishing_at": self.fishing_at,
                 "gift_show": self.gift_show, "gift_show_at": self.gift_show_at,
+                "game": self.game, "game_at": self.game_at,
             })
             snapshot["avatar_images"] = self.avatar_images.copy()
             snapshot["video_image"] = self.video_image

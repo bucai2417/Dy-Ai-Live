@@ -253,6 +253,7 @@ def test_invalid_prices_cannot_be_saved(price):
 
 @pytest.mark.parametrize("allowlist,expected", [("", 0), ("国歌", 0), ("晴天 | 周杰伦", 1)])
 def test_idle_dj_uses_only_reviewed_choices(monkeypatch, allowlist, expected):
+    store._data["idle"]["ai_chat"] = False
     async def scenario():
         brain = scheduler.Brain()
         store._data["idle"]["gameplay_invites"] = False

@@ -322,6 +322,15 @@ class StudioWindow(QMainWindow):
         self.ai_state_label.setWordWrap(True)
         self.ai_state_label.setObjectName("status")
         layout.addWidget(self.ai_state_label)
+        games_row = QHBoxLayout()
+        for label, action in (("成语接龙", "idiom"), ("AI画你猜", "drawing"), ("下一题", "skip"), ("结束小游戏", "stop")):
+            button = QPushButton(label)
+            button.clicked.connect(lambda checked=False, operation=action: self.client.send({"cmd": "game", "action": operation}))
+            games_row.addWidget(button)
+        layout.addLayout(games_row)
+        self.game_status = QLabel("小游戏：等待开局；观众可发成语接龙 / 你画我猜")
+        self.game_status.setWordWrap(True)
+        layout.addWidget(self.game_status)
         fishing_row = QHBoxLayout()
         for label, action in (("去钓鱼", "start"), ("协力拉钩", "pull"), ("花式跳水", "dive"), ("收竿返回", "cancel")):
             button = QPushButton(label)
@@ -474,6 +483,9 @@ class StudioWindow(QMainWindow):
 
     def _message(self, message):
         kind = message.get("type")
+        if kind in ("hello", "game"):
+            game = self.state.game
+            self.game_status.setText((game.get("label", "小游戏") + "：" + game.get("feedback", "")) if game.get("active") else "小游戏：等待开局")
         if kind in ("hello", "fishing"):
             game = self.state.fishing
             self.fishing_status.setText("钓鱼：" + game.get("label", "等待开局"))
@@ -665,6 +677,9 @@ class StudioWindow(QMainWindow):
             return
         from ..brain.capabilities import status_line
         text = "AI 当前知道：" + status_line(context)
+        companion = context.get("companion") or {}
+        if companion.get("enabled"):
+            text += "\n自主聊天：" + companion.get("status", "等待安静时找话题")
         operation = context.get("last_operation")
         if operation:
             text += "\n最近操作：" + ("" if operation["ok"] else "未执行 · ") + operation["result"]

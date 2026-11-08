@@ -48,7 +48,7 @@ class Preferences(QDialog):
         self._field("pace", "idle_chat_seconds", "冷场等待（秒）", (0, 3600, 1))
         self._field("templates", "enabled", "启用预设互动话术", "bool")
         self._field("templates", "welcome", "进场欢迎", "bool")
-        self._field("templates", "idle", "冷场主动聊天", "bool")
+        self._field("templates", "idle", "传统预设冷场话术（关闭AI自主聊天时生效）", "bool")
         self._field("templates", "gift", "礼物感谢", "bool")
         self._field("templates", "follow", "关注感谢", "bool")
         self._field("templates", "prefer_llm", "优先使用 AI 即兴台词", "bool")
@@ -59,6 +59,13 @@ class Preferences(QDialog):
         self.line_editor = LineEditor(client)
         self.form.addRow(self.line_editor)
         self._tab("冷场互动")
+        self._field("idle", "ai_chat", "AI自主找话题聊天（不使用预设内容）", "bool")
+        self._field("idle", "chat_chars", "自主聊天目标字数（完整句收尾）", (40, 300, 10))
+        self._field("idle", "topic_preferences", "话题偏好（留空由AI选择，最多1000字）")
+        note = QLabel("无需有观众也能聊天；使用已配置的AI模型，会产生Token用量。近期话题会被记住，降低重复。\n"
+                      "模型不可用时等待重试，不播放预设聊天；间隔在‘语音与节奏’设置，最短15秒。")
+        note.setWordWrap(True)
+        self.form.addRow(note)
         self._field("idle", "dream_talk", "睡着后说梦话（保持睡姿）", "bool")
         self._field("idle", "dream_seconds", "梦话间隔（秒）", (15, 3600, 5))
         self._field("idle", "gameplay_invites", "主动邀请观众体验已开启的玩法", "bool")
@@ -91,9 +98,23 @@ class Preferences(QDialog):
         preview.clicked.connect(lambda: self.client.send({"cmd": "idle_preview"}))
         self.form.addRow(preview)
         note = QLabel("收到观众互动后重新计时；播报、待回复消息、点赞整活和暂停期间不会自动插入。\n"
-                      "动作与冷场聊天独立开关；聊天间隔在「语音与节奏」设置，话题和邀请台词在「内置话术」修改。\n"
+                      "动作与聊天独立开关；聊天间隔在‘语音与节奏’设置。AI自主聊天使用上方话题偏好，传统话术在‘内置话术’修改。\n"
                       "普通场景自动散步约24秒；观众互动会让路，睡觉、驾驶或主动场景行为不被打断。\n"
                       "钓台的独立自动动作、换点和邀请请在‘钓鱼玩法’设置；这些功能不会自行进入钓鱼模式。")
+        note.setWordWrap(True)
+        self.form.addRow(note)
+        self._tab("弹幕小游戏")
+        self._field("games", "enabled", "开启弹幕小游戏", "bool")
+        self._field("games", "chat_control", "允许弹幕开局", "bool")
+        self._field("games", "voice", "播报开局与答对祝贺", "bool")
+        self._field("games", "rounds", "每局最多回合数", (1, 10, 1))
+        self._field("games", "round_seconds", "每题答题时间（秒）", (30, 180, 5))
+        self._field("games", "draw_seconds", "简笔画逐笔显示时长（秒）", (5, 30, 1))
+        self._field("games", "auto_start", "安静时自动邀请玩小游戏", "bool")
+        self._field("games", "auto_seconds", "自动开局等待（秒）", (120, 3600, 30))
+        note = QLabel("发‘成语接龙’或‘你画我猜’开局，直接发答案参与；开局者、管理员可发‘结束小游戏’。\n"
+                      "成语按末字同字接龙，AI核验可能有误。猜画由文本AI生成简笔画，无需生图密钥。\n"
+                      "积分只保留本局。超时无人答对会结束；礼物优先演出，游戏计时暂停后恢复。")
         note.setWordWrap(True)
         self.form.addRow(note)
         self._tab("音乐与画面")

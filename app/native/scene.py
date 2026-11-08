@@ -24,6 +24,7 @@ from .avatar import LayeredAvatar
 from .world_scene import WorldRenderer
 from .fishing_scene import FishingRenderer
 from .gift_scene import GiftRenderer
+from .game_scene import GameRenderer
 from .ticker import TickerRenderer
 from .icons import draw_icon
 from .text_overlay import draw_outlined, draw_subtitle
@@ -67,6 +68,7 @@ class Scene:
         self.world = WorldRenderer()
         self.fishing = FishingRenderer()
         self.gift_show = GiftRenderer()
+        self.games = GameRenderer()
         self.ticker = TickerRenderer()
         self.hud_key = None
         self.hud_image = None
@@ -139,13 +141,16 @@ class Scene:
                 painter.setClipRect(QRectF(*self.layout.stage))
             stunt = stunt_age(state, now)
             gift = bool((state.get("gift_show") or {}).get("active"))
-            if gift:
+            game = bool((state.get("game") or {}).get("active"))
+            if gift or game:
                 stunt = None
             fishing = (state.get("fishing") or {}).get("active", False)
             interacting = (state.get("fishing") or {}).get("phase") == "interacting"
             if interacting and ((state.get("fishing") or {}).get("interruption") or {}).get("world"):
                 fishing = False
-            if fishing:
+            if game and not gift:
+                self.games.draw(painter, self, state, self.layout.effects, now)
+            elif fishing:
                 if not interacting:
                     stunt = None
                 self.fishing.draw(painter, self, state, self.layout.effects, now, show_actor=not gift and stunt is None)
@@ -157,7 +162,7 @@ class Scene:
                 draw_stunt(painter, self, state, self.layout.effects, *stunt, now)
             if gift:
                 self.gift_show.draw(painter, self, state, self.layout.effects, now)
-            if not gift or (state["gift_show"]["active"].get("effect") != "video"):
+            if not game and (not gift or state["gift_show"]["active"].get("effect") != "video"):
                 self._video(painter, state)
             painter.restore()
             painter.drawImage(QRectF(0, 0, self.design_width, self.design_height), self._hud(state))
@@ -436,7 +441,7 @@ class Scene:
             self._music_player(painter, state, now)
         if now < state["subtitle_until"] and (state["config"].get("stage") or {}).get("show_subtitle", True):
             rect = self.layout.subtitle
-            game = state.get("fishing") or {}
+            game = {} if (state.get("game") or {}).get("active") else state.get("fishing") or {}
             if game.get("active"):
                 left, top, scene_width, scene_height = self.layout.effects
                 rect = (left + 20, top + scene_height - 110 * scene_width / 960 - 82, scene_width - 40, 82)
