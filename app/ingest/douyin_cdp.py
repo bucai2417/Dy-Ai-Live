@@ -793,16 +793,20 @@ class DouyinCDPIngestor:
         self._channel_events = self._channel_events[-500:]
         return False
 
-    def _message_duplicate(self, method: str, payload: bytes) -> bool:
+    @staticmethod
+    def _message_key(method: str, payload: bytes) -> str:
         common = next((field.buf for field in pb_decode(payload)
                        if field.num == 1 and field.wire == 2), None)
         if not common:
-            return False
+            return ""
         identifier = next((field.varint for field in pb_decode(common)
                            if field.num == 2 and field.varint), None)
-        if not identifier:
+        return f"{method}:{identifier}" if identifier else ""
+
+    def _message_duplicate(self, method: str, payload: bytes) -> bool:
+        key = self._message_key(method, payload)
+        if not key:
             return False
-        key = f"{method}:{identifier}"
         if key in self._message_ids:
             return True
         self._message_ids[key] = None
@@ -873,12 +877,17 @@ class DouyinCDPIngestor:
                 elif method == "WebcastSocialMessage":
                     self._emit_async(Event(kind="follow", user_name=actor, avatar=avatar))
                 elif method == "WebcastLikeMessage":
-                    self._ws_like_seen = True
-                    self._last_ws_like = time.time()
                     count, total = self._like_values(payload)
-                    self._emit_async(Event(kind="like", user_id=user.get("id", ""), user_name=actor,
-                                           gift_count=count, avatar=avatar, like_count=count,
-                                           like_total=total, like_source=f"douyin:{self.room}"))
+                    if count > 0:
+                        self._ws_like_seen = True
+                        self._last_ws_like = time.time()
+                    event = Event(kind="like", user_id=user.get("id", ""), user_name=actor,
+                                  gift_count=count, avatar=avatar, like_count=count,
+                                  like_total=total, like_source=f"douyin:{self.room}", like_incremental=True)
+                    identifier = self._message_key(method, payload)
+                    if identifier:
+                        event.id = f"douyin:{self.room}:{identifier}"
+                    self._emit_async(event)
         except Exception as exc:
             log.debug("帧解析异常：%s", exc)
 
@@ -991,7 +1000,7 @@ class DouyinCDPIngestor:
     @staticmethod
     def _like_values(payload: bytes) -> tuple[int, int | None]:
         fields = {field.num: field.varint for field in pb_decode(payload) if field.wire == 0}
-        return max(0, int(fields.get(2, 1))), fields.get(3)
+        return max(0, int(fields.get(2, 0))), fields.get(3)
 
     def _emit_async(self, ev: Event) -> None:
         """CDP 事件在读取协程里触发，这里切回事件循环投递。"""

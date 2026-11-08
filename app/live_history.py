@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from .fishing_board import FishingBoard
+from .like_goal import MAX_RECENT_LIKES
 
 
 log = logging.getLogger(__name__)
@@ -57,6 +58,9 @@ class LiveHistory:
             like_state = data.get("likes", {})
             restored_likes = {key: self._count(like_state.get(key, 0)) for key in ("total", "completed", "index")}
             source_totals = {str(key): self._count(value) for key, value in like_state.get("source_totals", {}).items()}
+            event_ids = like_state.get("event_ids", [])
+            if not isinstance(event_ids, list) or any(not isinstance(value, str) or not value for value in event_ids):
+                raise ValueError("点赞消息记录格式错误")
             target = self._count(like_state.get("next_target", self.likes.step))
             fishing_board = FishingBoard.restore(data.get("fishing_board", {}))
             for key, value in counts.items():
@@ -68,6 +72,7 @@ class LiveHistory:
             for key, value in restored_likes.items():
                 setattr(self.likes, key, value)
             self.likes.source_totals = source_totals
+            self.likes.event_ids = dict.fromkeys(event_ids[-MAX_RECENT_LIKES:])
             self.likes.next_target = max(self.likes.total + 1, target) if like_state.get("step") == self.likes.step else self.likes.total + self.likes.step
             self.status.update(savedAt=row[1], error="")
             return True
@@ -92,7 +97,8 @@ class LiveHistory:
             "gift_board": self.metrics.gift_board.records,
             "fishing_board": self.metrics.fishing_board.export(),
             "events": {key: self.hub.stats[key] for key in EVENT_COUNTERS},
-            "likes": {key: getattr(self.likes, key) for key in ("total", "step", "next_target", "completed", "index", "source_totals")},
+            "likes": {**{key: getattr(self.likes, key) for key in ("total", "step", "next_target", "completed", "index", "source_totals")},
+                      "event_ids": list(self.likes.event_ids)},
         })
 
     def write(self, day, data):

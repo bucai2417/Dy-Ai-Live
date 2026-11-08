@@ -323,7 +323,7 @@ class FishingRenderer:
     def _status(self, painter, scene, game, height):
         phase = game.get("phase")
         item = (game.get("fish") or {}).get("category") == "item"
-        title = {"waiting": "静候鱼讯…", "hooked": "钩住奇物！发拉 / 拉钩协力打捞" if item else "咬钩了！发拉 / 拉钩或点赞收线",
+        title = {"waiting": "静候鱼讯 · 咬钩后点赞 / 拉钩收线", "hooked": "钩住奇物！发拉 / 拉钩或点赞打捞" if item else "咬钩了！发拉 / 拉钩或点赞收线",
                  "landing": "稳住！宝贝正在出水" if item else "稳住！鱼正在出水", "caught": "打捞成功！" if item else "捕获成功！",
                  "escaped": "这次差一点，再接再厉", "diving": "花式跳水 · 鱼群避让", "interacting": "放竿互动 · 表演后继续本轮"}.get(phase, "协力钓鱼")
         if phase == "diving":
@@ -333,11 +333,12 @@ class FishingRenderer:
         scene.outlined(painter, (26, height - 62, 750, 28), title, 21, "#ffdb95" if phase == "hooked" else "#e4f3ef", True)
         if phase == "hooked":
             scene.outlined(painter, (785, height - 62, 149, 28), f"剩余 {math.ceil(game['remaining'])} 秒", 17, "#c3ece1", align="right")
+            scene.outlined(painter, (30, height - 35, 80, 25), f"{game['progress']:.1%}", 15, "#83e0c5")
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(QColor(9, 40, 53, 120))
-            painter.drawRoundedRect(QRectF(30, height - 21, 530, 5), 2.5, 2.5)
+            painter.drawRoundedRect(QRectF(120, height - 21, 440, 5), 2.5, 2.5)
             painter.setBrush(QColor("#83e0c5"))
-            painter.drawRoundedRect(QRectF(30, height - 21, 530 * game["progress"], 5), 2.5, 2.5)
+            painter.drawRoundedRect(QRectF(120, height - 21, 440 * game["progress"], 5), 2.5, 2.5)
             winner = (game.get("winner") or {}).get("name")
             scene.outlined(painter, (580, height - 33, 354, 25), "领先 · " + winner if winner else f"{game['likes_per_pull']} 赞 = 拉一次", 15, "#c7e2df", align="right")
         else:

@@ -7,6 +7,9 @@ import uuid
 from collections import deque
 
 
+MAX_RECENT_LIKES = 4096
+
+
 STUNTS = {
     "swim": {"label": "深蓝环游 · 流光泡泡", "duration": 16.0},
     "bicycle": {"label": "鱼鱼骑车巡游", "duration": 8.0},
@@ -31,6 +34,7 @@ class LikeGoal:
         self.ready_at = 0.0
         self.paused_at = None
         self.source_totals = {}
+        self.event_ids = {}
         self.day = dt.date.today().isoformat()
         self._day_changed = False
 
@@ -71,6 +75,12 @@ class LikeGoal:
 
     def add(self, event):
         self.roll_day()
+        if event.like_incremental and event.id:
+            if event.id in self.event_ids:
+                return
+            self.event_ids[event.id] = None
+            if len(self.event_ids) > MAX_RECENT_LIKES:
+                self.event_ids.pop(next(iter(self.event_ids)))
         count = event.like_count if event.like_count is not None else event.gift_count
         count = max(0, int(count or 0))
         total = event.like_total
@@ -78,7 +88,7 @@ class LikeGoal:
             source = event.like_source or "default"
             previous = self.source_totals.get(source)
             self.source_totals[source] = max(previous or 0, int(total), 0)
-            if previous is not None:
+            if previous is not None and not event.like_incremental:
                 count = max(0, int(total) - previous) if total >= previous else 0
         self.total += count
         if not self.enabled or self.paused_at is not None:

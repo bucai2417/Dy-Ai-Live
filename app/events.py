@@ -27,6 +27,7 @@ class Event:
     like_count: int | None = None
     like_total: int | None = None
     like_source: str = ""
+    like_incremental: bool = False
     is_admin: bool = False
 
     def to_dict(self) -> dict:
